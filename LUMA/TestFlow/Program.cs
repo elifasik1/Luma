@@ -487,7 +487,9 @@ if (args.Contains("--agent-only", StringComparer.OrdinalIgnoreCase))
         "Can you make today's plan lighter?",
         "I want to postpone this task until tomorrow.",
         "Please leave the career profile task for today.",
-        "I want to skip the career profile task today."
+        "I want to skip the career profile task today.",
+        "Can you adjust my day?",
+        "Please adjust today's plan."
     };
     foreach (var message in explicitPlanChangeMessages)
     {
@@ -516,7 +518,8 @@ if (args.Contains("--agent-only", StringComparer.OrdinalIgnoreCase))
     if (!explicitGeminiActionDecision.ActionRequired ||
         !explicitGeminiActionDecision.RequiresApproval ||
         !geminiActionPrompt.Contains("set aside, postpone, leave, or skip a task", StringComparison.OrdinalIgnoreCase) ||
-        !geminiActionPrompt.Contains("even when the same message also mentions keeping an important goal on track", StringComparison.OrdinalIgnoreCase))
+        !geminiActionPrompt.Contains("even when the same message also mentions keeping an important goal on track", StringComparison.OrdinalIgnoreCase) ||
+        !geminiActionPrompt.Contains("limited time", StringComparison.OrdinalIgnoreCase))
     {
         throw new Exception("FAILURE: Gemini action planner prompt did not cover explicit mixed goal and postponement requests.");
     }
@@ -1539,6 +1542,68 @@ static async Task RunAdaptiveDeterministicFallbackTestsAsync()
         throw new Exception("FAILURE: Insufficient pending actions returned an invalid proposal, success claim, or mutation.");
     }
 
+    // End-to-end focused scenario: "I only have 30 minutes today and I'm feeling really tired. Can you adjust my day?"
+    var e2eHarness = await CreateAdaptiveHarnessWithActionsAsync(
+        ("Deep Work Session", 45, "Pending"),
+        ("Gentle Breathing", 20, "Pending"),
+        ("Evening Study", 35, "Pending"));
+
+    var e2eMessage = "I only have 30 minutes today and I'm feeling really tired. Can you adjust my day?";
+    var e2eResponse = await e2eHarness.AgentService.ExecuteAsync(
+        e2eHarness.UserId,
+        new AgentRequest(e2eHarness.Context.DreamId, e2eMessage));
+
+    if (!e2eResponse.RequiresApproval ||
+        e2eHarness.Repository.MutationCount != 0 ||
+        e2eResponse.ActionProposal is null ||
+        e2eResponse.ActionProposal.ActionName != "update_daily_plan" ||
+        e2eResponse.ActionProposal.ProposalResult.Data is not UpdateDailyPlanResult e2eProposalResult ||
+        e2eProposalResult.Applied ||
+        !e2eProposalResult.RequiresApproval ||
+        e2eProposalResult.Proposal is null ||
+        e2eProposalResult.Proposal.KeepActionTitle != "Gentle Breathing" ||
+        e2eProposalResult.Proposal.KeepActionEstimatedMinutes != 20 ||
+        e2eProposalResult.Proposal.RestActionIds.Count != 2 ||
+        !e2eResponse.Reply.Contains("Gentle Breathing", StringComparison.Ordinal) ||
+        !e2eResponse.Reply.Contains("20 min", StringComparison.Ordinal) ||
+        !e2eResponse.Reply.Contains("Would you like me to make that change", StringComparison.Ordinal))
+    {
+        throw new Exception("FAILURE: End-to-end low-energy/30-minute scenario did not propose a realistic plan within the 30-minute limit without mutation.");
+    }
+
+    // Persist approval and verify database mutation occurs only after explicit approval
+    var e2eApproval = await e2eHarness.AgentService.ExecuteUpdateDailyPlanAsync(
+        e2eHarness.UserId,
+        new AgentRequest(e2eHarness.Context.DreamId, "Approve"),
+        new UpdateDailyPlanRequest("Approve", Approve: true, Proposal: e2eProposalResult.Proposal));
+
+    if (e2eApproval.Data is not UpdateDailyPlanResult e2eApprovalResult ||
+        !e2eApprovalResult.Applied ||
+        e2eApprovalResult.RequiresApproval ||
+        e2eHarness.Repository.MutationCount != 1 ||
+        e2eHarness.Actions.Single(a => a.Title == "Gentle Breathing").Status != "Pending" ||
+        e2eHarness.Actions.Single(a => a.Title == "Deep Work Session").Status != "Skipped" ||
+        e2eHarness.Actions.Single(a => a.Title == "Evening Study").Status != "Skipped" ||
+        e2eApprovalResult.UpdatedPlan is null ||
+        e2eApprovalResult.UpdatedPlan.SkippedActions != 2 ||
+        e2eApprovalResult.UpdatedPlan.Actions.Single(a => a.Title == "Gentle Breathing").Status != "Pending")
+    {
+        throw new Exception("FAILURE: Approving the low-energy adaptive proposal did not persist the change or update the Today view.");
+    }
+
+    // Edge case: when no pending action fits within the user's explicit limit (e.g. 10 minutes when actions are 45 and 60 min)
+    var noFitHarness = await CreateAdaptiveHarnessWithActionsAsync(
+        ("Deep Work Session", 45, "Pending"),
+        ("Long Workshop", 60, "Pending"));
+    var noFitResponse = await noFitHarness.AgentService.ExecuteAsync(
+        noFitHarness.UserId,
+        new AgentRequest(noFitHarness.Context.DreamId, "I only have 10 minutes today and I'm feeling really tired. Can you adjust my day?"));
+    if (noFitHarness.Repository.MutationCount != 0 ||
+        (noFitResponse.ActionProposal is not null && noFitResponse.ActionProposal.ProposalResult.Data is UpdateDailyPlanResult r && r.Proposal is not null))
+    {
+        throw new Exception("FAILURE: Adaptive capability invented or proposed an action when none fit within the user's explicit time constraint.");
+    }
+
     await AssertAgentNotFoundAsync(
         insufficientHarness.AgentService,
         insufficientHarness.UserId,
@@ -1748,7 +1813,10 @@ static async Task RunDailyPlanSnapshotTestsAsync()
     Console.WriteLine("DAILY PLAN SNAPSHOT TESTS PASSED: daily idempotency, rollover/refresh history preservation, status/adaptive synchronization, date-safe reflection association, calendar summaries/details, and ownership isolation verified.");
 }
 
-static async Task<AdaptiveHarness> CreateAdaptiveHarnessAsync(params string[] statuses)
+static Task<AdaptiveHarness> CreateAdaptiveHarnessAsync(params string[] statuses) =>
+    CreateAdaptiveHarnessWithActionsAsync(statuses.Select((status, index) => ($"Action {index + 1}", 15 + index, status)).ToArray());
+
+static async Task<AdaptiveHarness> CreateAdaptiveHarnessWithActionsAsync(params (string Title, int EstimatedMinutes, string Status)[] actionDefs)
 {
     var dreamId = Guid.NewGuid();
     var userId = Guid.NewGuid();
@@ -1760,18 +1828,18 @@ static async Task<AdaptiveHarness> CreateAdaptiveHarnessAsync(params string[] st
         Description = "Adaptive test context."
     };
 
-    var actions = statuses.Select((status, index) => new DailyAction
+    var actions = actionDefs.Select((def, index) => new DailyAction
     {
         Id = Guid.NewGuid(),
         DreamId = dreamId,
         GoalTitle = "Test goal",
-        Title = $"Action {index + 1}",
+        Title = def.Title,
         Description = "Test action",
         TimeOfDay = "Morning",
-        EstimatedMinutes = 15 + index,
+        EstimatedMinutes = def.EstimatedMinutes,
         Intention = "Test intention",
         Order = index + 1,
-        Status = status,
+        Status = def.Status,
         GeneratedAt = DateTime.UtcNow
     }).ToList();
     dream.DailyActions = actions;

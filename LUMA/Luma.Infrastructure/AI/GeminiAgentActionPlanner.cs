@@ -154,6 +154,7 @@ You are not allowed to mutate data or apply any change.
 The only supported action is update_daily_plan. It creates a proposal and always requires explicit user approval.
 For informational questions, status requests, future context, goal questions, progress, or reflections that do not ask to change today's plan, return actionRequired false.
 An explicit request to set aside, postpone, leave, or skip a task for today, or to make today's plan lighter, is an actionable daily-plan change request. Return actionRequired true for update_daily_plan with requiresApproval true, even when the same message also mentions keeping an important goal on track. A goal reference does not cancel an explicit request to change today's plan.
+Requests expressing limited time (such as only having 30 minutes) or low energy / feeling tired together with a request to adjust the day or make today's plan lighter are actionable daily-plan change requests requiring an update_daily_plan proposal with requiresApproval true.
 Never select complete_daily_action, create_reflection, delete_user, database operations, SQL, repository calls, or arbitrary IDs.
 Do not provide UserId, DreamId, DailyAction IDs, or persistence instructions.
 If update_daily_plan is selected, actionRequest must contain only userSituation describing the user's stated situation.

@@ -43,11 +43,12 @@ public sealed class AdaptiveDailyPlanCapability : IAdaptiveDailyPlanCapability
 
         // Create a deterministic adaptive proposal from the
         // existing pending actions.
-        return CreateDeterministicProposal(existingPlan.Plan);
+        return CreateDeterministicProposal(existingPlan.Plan, userSituation);
     }
 
     private static DailyPathChangeProposal? CreateDeterministicProposal(
-        DailyPlanContext plan)
+        DailyPlanContext plan,
+        string? userSituation = null)
     {
         var eligibleActions = plan.Actions
             .Where(action =>
@@ -66,12 +67,37 @@ public sealed class AdaptiveDailyPlanCapability : IAdaptiveDailyPlanCapability
             return null;
         }
 
-        var keepAction = eligibleActions[0];
+        var maxMinutes = ExtractMaxMinutes(userSituation);
+        DailyActionContext keepAction;
+
+        if (maxMinutes.HasValue)
+        {
+            var fitting = eligibleActions.FirstOrDefault(action =>
+                action.EstimatedMinutes > 0 && action.EstimatedMinutes <= maxMinutes.Value);
+
+            if (fitting is null)
+            {
+                // No eligible action fits within the user's explicit time constraint.
+                // We must not invent a suitable action.
+                return null;
+            }
+
+            keepAction = fitting;
+        }
+        else
+        {
+            keepAction = eligibleActions[0];
+        }
 
         var restActionIds = eligibleActions
-            .Skip(1)
+            .Where(action => action.Id != keepAction.Id)
             .Select(action => action.Id)
             .ToArray();
+
+        if (restActionIds.Length == 0)
+        {
+            return null;
+        }
 
         return new DailyPathChangeProposal(
             "suggest_plan_change",
@@ -79,6 +105,26 @@ public sealed class AdaptiveDailyPlanCapability : IAdaptiveDailyPlanCapability
             keepAction.Title,
             keepAction.EstimatedMinutes,
             restActionIds);
+    }
+
+    private static int? ExtractMaxMinutes(string? userSituation)
+    {
+        if (string.IsNullOrWhiteSpace(userSituation))
+        {
+            return null;
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(
+            userSituation,
+            @"\b(\d+)\s*(?:minutes?|dakika|min|dk)\b",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (match.Success && int.TryParse(match.Groups[1].Value, out var minutes) && minutes > 0)
+        {
+            return minutes;
+        }
+
+        return null;
     }
 
     public Task<DailyPathResponse?> ApplyAsync(

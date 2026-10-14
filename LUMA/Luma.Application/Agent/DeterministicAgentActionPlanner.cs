@@ -19,6 +19,8 @@ public sealed class DeterministicAgentActionPlanner : IAgentActionPlanner
              lowerMessage.Contains(" for today", StringComparison.Ordinal)) ||
             lowerMessage.Contains("plan lighter", StringComparison.Ordinal) ||
             lowerMessage.Contains("day lighter", StringComparison.Ordinal) ||
+            lowerMessage.Contains("adjust my day", StringComparison.Ordinal) ||
+            lowerMessage.Contains("adjust today", StringComparison.Ordinal) ||
             (lowerMessage.Contains("skip ", StringComparison.Ordinal) &&
              lowerMessage.Contains(" today", StringComparison.Ordinal));
         var asksForLowEnergyPlanChange =
@@ -34,9 +36,9 @@ public sealed class DeterministicAgentActionPlanner : IAgentActionPlanner
             ? new AgentActionDecision(
                 ActionRequired: true,
                 ActionName: AgentActionDecisionValidator.UpdateDailyPlanAction,
-                Reason: asksForExplicitPlanChange
-                    ? "The user explicitly asked to modify today's plan."
-                    : "The user described limited time or energy for today.",
+                Reason: asksForLowEnergyPlanChange
+                    ? "The user described limited time or energy for today."
+                    : "The user explicitly asked to modify today's plan.",
                 RequiresApproval: true,
                 ActionRequest: new AgentActionRequest(message.Trim()))
             : new AgentActionDecision(
