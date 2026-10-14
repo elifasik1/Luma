@@ -1,0 +1,31 @@
+# Build output
+**/bin/
+**/obj/
+**/.vs/
+
+# IDE/user files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+
+# Local configuration and secrets
+appsettings.*.local.json
+appsettings.Local.json
+*.secrets.json
+.env
+.env.*
+!.env.example
+
+# Local databases and runtime files
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

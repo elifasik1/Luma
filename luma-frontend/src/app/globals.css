@@ -1,0 +1,639 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   LUMA — Global Styles
+   Visual metaphor: LIGHT / POSSIBILITY / FUTURE BECOMING VISIBLE
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   Tailwind v4 theme — LUMA design tokens
+   --------------------------------------------------------------------------- */
+@theme inline {
+  /* Brand colors */
+  --color-luma-plum: #4B2E4D;
+  --color-luma-peach: #F7A695;
+  --color-luma-cream: #FFF6EE;
+  --color-luma-lilac: #DCC7EB;
+  --color-luma-sage: #C7DBC9;
+
+  /* Semantic aliases — driven by CSS custom properties from ThemeProvider */
+  --color-luma-bg: var(--luma-bg, #FFF6EE);
+  --color-luma-bg-secondary: var(--luma-bg-secondary, #FFF0E3);
+  --color-luma-primary: var(--luma-primary, #4B2E4D);
+  --color-luma-accent: var(--luma-accent, #F7A695);
+  --color-luma-surface: var(--luma-surface, #DCC7EB);
+  --color-luma-muted: var(--luma-muted, #C7DBC9);
+  --color-luma-text: var(--luma-text, #4B2E4D);
+  --color-luma-text-secondary: var(--luma-text-secondary, #7A5A7E);
+
+  /* Typography */
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-dm-serif);
+
+  /* Animation speeds — driven by ThemeProvider */
+  --animate-luma-float: luma-float var(--luma-animation-speed, 3s) ease-in-out infinite;
+  --animate-luma-glow: luma-glow var(--luma-animation-speed, 3s) ease-in-out infinite;
+  --animate-luma-fade-in: luma-fade-in 0.6s ease-out both;
+  --animate-luma-slide-up: luma-slide-up 0.5s ease-out both;
+}
+
+/* ---------------------------------------------------------------------------
+   Base root styles — warm_dream defaults
+   --------------------------------------------------------------------------- */
+:root {
+  --luma-bg: #FFF6EE;
+  --luma-bg-secondary: #FFF0E3;
+  --luma-primary: #4B2E4D;
+  --luma-accent: #F7A695;
+  --luma-surface: #DCC7EB;
+  --luma-muted: #C7DBC9;
+  --luma-text: #4B2E4D;
+  --luma-text-secondary: #7A5A7E;
+  --luma-radius: 1.5rem;
+  --luma-shadow: 0 4px 24px rgba(75, 46, 77, 0.06);
+  --luma-transition-speed: 0.4s;
+  --luma-animation-speed: 3s;
+}
+
+/* ---------------------------------------------------------------------------
+   Base body
+   --------------------------------------------------------------------------- */
+body {
+  background: var(--luma-bg);
+  color: var(--luma-text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  transition: background-color var(--luma-transition-speed) ease,
+              color var(--luma-transition-speed) ease;
+}
+
+/* ---------------------------------------------------------------------------
+   Selection color
+   --------------------------------------------------------------------------- */
+::selection {
+  background: var(--luma-surface);
+  color: var(--luma-primary);
+}
+
+/* ---------------------------------------------------------------------------
+   Focus styles — visible, on-brand
+   --------------------------------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--luma-accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Smooth scrolling (respects motion preferences)
+   --------------------------------------------------------------------------- */
+html {
+  scroll-behavior: smooth;
+}
+
+/* ---------------------------------------------------------------------------
+   Keyframes
+   --------------------------------------------------------------------------- */
+@keyframes luma-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes luma-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+@keyframes luma-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes luma-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.luma-rhythm-ambient-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.luma-ambient-element {
+  position: absolute;
+  width: var(--ambient-size);
+  height: var(--ambient-size);
+  opacity: var(--ambient-opacity);
+  filter: blur(var(--ambient-blur));
+  color: var(--ambient-color);
+  transform: rotate(var(--ambient-rotation));
+  animation-duration: var(--ambient-duration);
+  animation-delay: var(--ambient-delay);
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+
+.luma-ambient-element--spark {
+  background: currentColor;
+  clip-path: polygon(50% 0, 59% 40%, 100% 50%, 59% 60%, 50% 100%, 41% 60%, 0 50%, 41% 40%);
+}
+
+.luma-ambient-element--particle {
+  width: calc(var(--ambient-size) * 0.72);
+  height: calc(var(--ambient-size) * 0.72);
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.luma-ambient-element--glow {
+  border-radius: 50%;
+  background: radial-gradient(circle, currentColor 0%, transparent 72%);
+}
+
+.luma-ambient-element--line {
+  width: var(--ambient-size);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor 45%, transparent);
+  transform: rotate(var(--ambient-rotation));
+}
+
+.luma-ambient-element--orbit {
+  width: var(--ambient-size);
+  height: calc(var(--ambient-size) * 0.64);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transform: rotate(var(--ambient-rotation));
+}
+
+.luma-ambient-element--page {
+  width: var(--ambient-size);
+  height: calc(var(--ambient-size) * 1.28);
+  border: 1px solid currentColor;
+  border-radius: 2px 5px 3px 2px;
+}
+
+.luma-ambient-element--page::after {
+  content: "";
+  position: absolute;
+  top: 30%;
+  left: 22%;
+  width: 56%;
+  height: 1px;
+  background: currentColor;
+  box-shadow: 0 4px currentColor, 0 8px currentColor;
+  opacity: 0.7;
+}
+
+.luma-ambient-element--organic {
+  border-radius: 62% 38% 56% 44% / 42% 58% 42% 58%;
+  background: radial-gradient(ellipse at 35% 35%, currentColor 0%, transparent 72%);
+}
+
+.luma-ambient-element--float,
+.luma-ambient-element--drift {
+  animation-name: luma-ambient-drift;
+}
+
+.luma-ambient-element--breathe {
+  animation-name: luma-ambient-breathe;
+}
+
+.luma-ambient-element--rise {
+  animation-name: luma-ambient-rise;
+}
+
+.luma-ambient-element--still {
+  animation-name: luma-ambient-still;
+}
+
+@keyframes luma-ambient-drift {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -7px; }
+}
+
+@keyframes luma-ambient-breathe {
+  0%, 100% { scale: 0.96; }
+  50% { scale: 1.04; }
+}
+
+@keyframes luma-ambient-rise {
+  0%, 100% { translate: 0 3px; }
+  50% { translate: 0 -9px; }
+}
+
+@keyframes luma-ambient-still {
+  0%, 100% { opacity: calc(var(--ambient-opacity) * 0.85); }
+  50% { opacity: var(--ambient-opacity); }
+}
+
+@media (max-width: 639px) {
+  .luma-ambient-element:nth-child(n + 4) {
+    display: none;
+  }
+
+  .luma-ambient-element {
+    width: calc(var(--ambient-size) * 0.7);
+    height: calc(var(--ambient-size) * 0.7);
+    filter: blur(calc(var(--ambient-blur) * 0.7));
+  }
+
+  .luma-ambient-element--line {
+    height: 1px;
+  }
+
+  .luma-ambient-element--page {
+    height: calc(var(--ambient-size) * 0.9);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luma-ambient-element {
+    animation: none;
+  }
+}
+
+/* Your World — a quiet, token-driven illustrated horizon. */
+.world-scene {
+  background:
+    radial-gradient(ellipse at 74% 18%, color-mix(in srgb, var(--luma-accent) 55%, transparent), transparent 31%),
+    linear-gradient(155deg, var(--luma-bg-secondary), var(--luma-bg) 62%, var(--luma-surface));
+  isolation: isolate;
+}
+
+.world-scene--cozy {
+  background:
+    radial-gradient(ellipse at 74% 20%, color-mix(in srgb, var(--luma-accent) 65%, transparent), transparent 34%),
+    linear-gradient(155deg, var(--luma-bg-secondary), var(--luma-bg) 62%, var(--luma-surface));
+}
+
+.world-scene--calm,
+.world-scene--airy {
+  background:
+    radial-gradient(ellipse at 75% 22%, color-mix(in srgb, var(--luma-surface) 75%, transparent), transparent 35%),
+    linear-gradient(155deg, var(--luma-bg), var(--luma-bg-secondary) 58%, var(--luma-muted));
+}
+
+.world-scene--creative {
+  background:
+    radial-gradient(ellipse at 74% 24%, color-mix(in srgb, var(--luma-accent) 50%, transparent), transparent 30%),
+    radial-gradient(ellipse at 18% 72%, color-mix(in srgb, var(--luma-surface) 65%, transparent), transparent 36%),
+    linear-gradient(155deg, var(--luma-bg-secondary), var(--luma-bg) 62%, var(--luma-surface));
+}
+
+.world-scene--focused {
+  background:
+    linear-gradient(130deg, color-mix(in srgb, var(--luma-bg-secondary) 92%, white), var(--luma-bg) 64%, var(--luma-muted));
+}
+
+.world-scene--energetic .world-scene__sun {
+  transform: scale(1.12);
+}
+
+.world-scene__glow {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--luma-bg) 0%, transparent 60%);
+  opacity: 0.36;
+  pointer-events: none;
+}
+
+.world-scene__sun {
+  position: absolute;
+  top: 12%;
+  right: 17%;
+  width: clamp(5.5rem, 15vw, 9rem);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--luma-accent) 76%, white);
+  box-shadow: 0 0 5rem color-mix(in srgb, var(--luma-accent) 48%, transparent);
+  transition: transform var(--luma-transition-speed) ease;
+}
+
+.world-scene__horizon {
+  position: absolute;
+  inset: 28% 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--luma-primary) 18%, transparent), transparent);
+}
+
+.world-scene__anchor-motifs {
+  position: absolute;
+  z-index: 1;
+  top: 9%;
+  left: 7%;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  pointer-events: none;
+}
+
+.world-scene__anchor-motif {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--luma-primary) 15%, transparent);
+  border-radius: 50%;
+  color: var(--luma-primary);
+  background: color-mix(in srgb, var(--luma-bg) 50%, transparent);
+  opacity: 0.34;
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  box-shadow: 0 0 1.8rem color-mix(in srgb, var(--luma-accent) 14%, transparent);
+}
+
+.world-scene__anchor-motif:nth-child(2) {
+  margin-top: 1.2rem;
+  opacity: 0.22;
+  transform: scale(0.8);
+}
+
+.world-scene__landscape {
+  position: absolute;
+  inset: auto 0 0;
+  height: 51%;
+  overflow: hidden;
+}
+
+.world-scene__hill {
+  position: absolute;
+  display: block;
+  width: 76%;
+  height: 100%;
+  border-radius: 50% 50% 0 0 / 26% 26% 0 0;
+}
+
+.world-scene__hill--back {
+  left: -9%;
+  bottom: -42%;
+  background: color-mix(in srgb, var(--luma-surface) 60%, transparent);
+  transform: rotate(-8deg);
+}
+
+.world-scene__hill--front {
+  right: -8%;
+  bottom: -54%;
+  background: color-mix(in srgb, var(--luma-muted) 70%, transparent);
+  transform: rotate(7deg);
+}
+
+.world-scene__architecture {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.world-scene__city {
+  position: absolute;
+  right: 7%;
+  bottom: 31%;
+  display: flex;
+  align-items: end;
+  gap: clamp(0.3rem, 1vw, 0.75rem);
+  opacity: 0.34;
+}
+
+.world-scene__city i {
+  display: block;
+  width: clamp(1.3rem, 4vw, 3rem);
+  height: clamp(3.5rem, 13vw, 7.5rem);
+  border: 1px solid color-mix(in srgb, var(--luma-primary) 28%, transparent);
+  border-radius: 0.55rem 0.55rem 0 0;
+  background: repeating-linear-gradient(0deg, transparent 0 0.7rem, color-mix(in srgb, var(--luma-accent) 44%, transparent) 0.75rem 0.86rem);
+}
+
+.world-scene__city i:nth-child(2),
+.world-scene__city i:nth-child(4) {
+  height: clamp(2.5rem, 9vw, 5.5rem);
+}
+
+.world-scene__tree {
+  position: absolute;
+  right: 13%;
+  bottom: 27%;
+  width: clamp(4rem, 12vw, 7rem);
+  height: clamp(7rem, 20vw, 11rem);
+  border-bottom: 1rem solid color-mix(in srgb, var(--luma-primary) 30%, transparent);
+  opacity: 0.42;
+}
+
+.world-scene__tree::before {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 48%;
+  width: 0.6rem;
+  height: 45%;
+  content: "";
+  background: color-mix(in srgb, var(--luma-primary) 34%, transparent);
+}
+
+.world-scene__tree i {
+  position: absolute;
+  display: block;
+  width: 54%;
+  aspect-ratio: 1;
+  border-radius: 55% 45% 60% 40%;
+  background: color-mix(in srgb, var(--luma-muted) 86%, var(--luma-primary));
+}
+
+.world-scene__tree i:nth-child(1) { top: 0; left: 22%; }
+.world-scene__tree i:nth-child(2) { top: 24%; left: 0; }
+.world-scene__tree i:nth-child(3) { top: 26%; right: 0; }
+
+.world-scene__creative-orbit {
+  position: absolute;
+  top: 23%;
+  right: 11%;
+  width: clamp(5rem, 13vw, 8rem);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--luma-primary) 16%, transparent);
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.world-scene__creative-orbit i {
+  position: absolute;
+  width: 1rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--luma-accent);
+}
+
+.world-scene__creative-orbit i:nth-child(1) { top: -0.3rem; left: 48%; }
+.world-scene__creative-orbit i:nth-child(2) { right: 0.1rem; bottom: 20%; background: var(--luma-muted); }
+.world-scene__creative-orbit i:nth-child(3) { bottom: 8%; left: 15%; background: var(--luma-surface); }
+
+.world-scene__window {
+  position: absolute;
+  top: 19%;
+  right: 10%;
+  display: grid;
+  width: clamp(5rem, 13vw, 8rem);
+  aspect-ratio: 1;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  padding: 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--luma-primary) 24%, transparent);
+  border-radius: 45% 45% 0.5rem 0.5rem;
+  opacity: 0.52;
+}
+
+.world-scene__window i {
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--luma-accent) 52%, transparent);
+}
+
+.world-scene__figure {
+  position: absolute;
+  bottom: 19%;
+  left: 54%;
+  z-index: 1;
+  width: clamp(5.5rem, 14vw, 8rem);
+  height: clamp(9rem, 22vw, 12rem);
+  animation: luma-float var(--luma-animation-speed) ease-in-out infinite;
+}
+
+.world-scene__figure-head {
+  position: absolute;
+  top: 0;
+  left: 39%;
+  width: 28%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--luma-primary);
+}
+
+.world-scene__figure-body {
+  position: absolute;
+  top: 25%;
+  left: 23%;
+  width: 58%;
+  height: 72%;
+  border-radius: 48% 48% 12% 12%;
+  background: linear-gradient(145deg, var(--luma-primary), color-mix(in srgb, var(--luma-primary) 66%, var(--luma-surface)));
+  clip-path: polygon(22% 0, 78% 0, 100% 100%, 0 100%);
+}
+
+.world-scene__figure-arm {
+  position: absolute;
+  top: 40%;
+  left: 61%;
+  width: 47%;
+  height: 12%;
+  border-radius: 999px;
+  background: var(--luma-primary);
+  transform: rotate(-43deg);
+  transform-origin: left center;
+}
+
+.world-scene__figure-light {
+  position: absolute;
+  top: 27%;
+  right: -8%;
+  display: grid;
+  width: 2.2rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--luma-accent) 76%, white);
+  color: var(--luma-primary);
+  font-size: 1.3rem;
+  box-shadow: 0 0 1.75rem color-mix(in srgb, var(--luma-accent) 50%, transparent);
+}
+
+.world-scene__caption {
+  position: absolute;
+  top: 50%;
+  left: clamp(1.25rem, 6vw, 4.5rem);
+  z-index: 2;
+  width: min(48%, 32rem);
+  transform: translateY(-50%);
+}
+
+.world-scene__eyebrow {
+  display: block;
+  margin-bottom: 0.75rem;
+  color: var(--luma-text-secondary);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+}
+
+.world-scene__note {
+  position: absolute;
+  right: 1.25rem;
+  bottom: 1rem;
+  z-index: 2;
+  max-width: 15rem;
+  color: var(--luma-text-secondary);
+  font-size: 0.7rem;
+  text-align: right;
+}
+
+.world-theme-swatch {
+  display: inline-block;
+  width: 1.3rem;
+  aspect-ratio: 1;
+  border: 2px solid color-mix(in srgb, var(--luma-primary) 18%, white);
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--luma-accent) 0 48%, var(--luma-surface) 49% 100%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--luma-muted) 42%, transparent);
+}
+
+/* ---------------------------------------------------------------------------
+   Accessibility: respect prefers-reduced-motion
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .world-scene {
+    min-height: 460px;
+  }
+
+  .world-scene__caption {
+    top: 2rem;
+    left: 1.25rem;
+    width: calc(100% - 2.5rem);
+    transform: none;
+  }
+
+  .world-scene__figure {
+    bottom: 12%;
+    left: 56%;
+  }
+
+  .world-scene__sun {
+    top: 36%;
+    right: 14%;
+  }
+
+  .world-scene__note {
+    max-width: 12rem;
+    font-size: 0.65rem;
+  }
+}

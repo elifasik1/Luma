@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Luma.Api/Luma.Api.csproj" />
+  <Project Path="Luma.Application/Luma.Application.csproj" />
+  <Project Path="Luma.Domain/Luma.Domain.csproj" />
+  <Project Path="Luma.Infrastructure/Luma.Infrastructure.csproj" />
+</Solution>
