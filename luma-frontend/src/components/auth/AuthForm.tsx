@@ -1,19 +1,37 @@
-"use client";
-
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useLumaTheme } from "@/theme/ThemeProvider";
+import {
+  normalizeAtmosphere,
+  normalizeIllustration,
+  normalizeMotion,
+  normalizePalette,
+} from "@/theme/normalize";
+import type { PaletteKey } from "@/theme/tokens";
+import { getUserTheme } from "@/lib/api";
 
 interface AuthFormProps {
   mode: "login" | "register";
 }
 
+const REGISTRATION_THEMES: Array<{ key: PaletteKey; label: string; swatch: string }> = [
+  { key: "warm_dream", label: "Warm Dream", swatch: "#e88062" },
+  { key: "forest_mist", label: "Forest Mist", swatch: "#3c6e5a" },
+  { key: "city_night", label: "City Night", swatch: "#24324a" },
+  { key: "ocean_light", label: "Ocean Light", swatch: "#3e8c9e" },
+  { key: "lavender_milk", label: "Lavender Milk", swatch: "#9683b5" },
+];
+
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { setTheme } = useLumaTheme();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [selectedPalette, setSelectedPalette] = useState<PaletteKey>("warm_dream");
+  const [hasSelectedPalette, setHasSelectedPalette] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDemoSubmitting, setIsDemoSubmitting] = useState(false);
@@ -30,6 +48,13 @@ export function AuthForm({ mode }: AuthFormProps) {
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data?.error || "Could not start demo session.");
+      }
+
+      if (data?.user?.themePreference) {
+        await setTheme(
+          { palette: normalizePalette(data.user.themePreference) },
+          { persist: false }
+        );
       }
 
       const returnUrl = searchParams.get("returnUrl");
@@ -70,11 +95,25 @@ export function AuthForm({ mode }: AuthFormProps) {
     setError(null);
     setIsSubmitting(true);
     try {
+      localStorage.removeItem("luma_theme_palette");
+      localStorage.removeItem("luma_theme_is_explicit");
+    } catch {
+      // ignore
+    }
+    try {
       const response = await fetch(`/api/auth/${mode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
-          isRegister ? { name, email, password } : { email, password }
+          isRegister
+             ? {
+                 name,
+                 email,
+                 password,
+                 themePreference: selectedPalette,
+                 themePreferenceIsExplicit: hasSelectedPalette,
+               }
+            : { email, password }
         ),
       });
       const result = await response.json();
@@ -82,6 +121,35 @@ export function AuthForm({ mode }: AuthFormProps) {
         setError(result.error ?? "We couldn't complete your request.");
         return;
       }
+
+      if (isRegister) {
+        // Registration stores the selected palette. Keep the initial choice
+        // marked as a suggestion unless the user explicitly clicked a theme;
+        // onboarding may then refine the first visual recommendation.
+        await setTheme(
+          { palette: selectedPalette },
+          { persist: false, markExplicit: hasSelectedPalette }
+        );
+      } else {
+        const savedTheme = await getUserTheme();
+        if (savedTheme) {
+          await setTheme(
+            {
+              palette: normalizePalette(savedTheme.palette),
+              atmosphere: normalizeAtmosphere(savedTheme.atmosphere),
+              illustration: normalizeIllustration(savedTheme.illustration),
+              motion: normalizeMotion(savedTheme.motion),
+            },
+            { persist: false, markExplicit: savedTheme.isExplicit ?? false }
+          );
+        } else if (result?.themePreference) {
+          await setTheme(
+            { palette: normalizePalette(result.themePreference) },
+            { persist: false, markExplicit: true }
+          );
+        }
+      }
+
       router.replace(safeReturnPath());
     } catch {
       setError("LUMA could not connect just now. Please try again.");
@@ -151,6 +219,38 @@ export function AuthForm({ mode }: AuthFormProps) {
             )}
           </label>
 
+          {isRegister && (
+            <div className="pt-1">
+              <span className="block text-xs font-semibold uppercase tracking-wider text-luma-text-secondary mb-2.5">
+                Choose your space aesthetic
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {REGISTRATION_THEMES.map(({ key, label, swatch }) => (
+                  <button
+                    key={key}
+                    type="button"
+                     onClick={() => {
+                       setSelectedPalette(key);
+                       setHasSelectedPalette(true);
+                     }}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border transition-all text-left ${
+                      selectedPalette === key
+                        ? "border-luma-primary bg-luma-primary/10 text-luma-primary ring-1 ring-luma-primary"
+                        : "border-luma-primary/15 bg-luma-bg/50 text-luma-text-secondary hover:border-luma-primary/30"
+                    }`}
+                  >
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: swatch }}
+                      aria-hidden="true"
+                    />
+                    <span className="truncate">{label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {error && (
             <p role="alert" className="rounded-xl border border-rose-300/50 bg-rose-100/60 px-4 py-3 text-sm text-rose-900">
               {error}
@@ -160,7 +260,7 @@ export function AuthForm({ mode }: AuthFormProps) {
           <button
             type="submit"
             disabled={isSubmitting || isDemoSubmitting}
-            className="w-full rounded-full bg-luma-primary px-6 py-3.5 font-medium text-luma-cream transition hover:opacity-90 disabled:opacity-60"
+            className="w-full rounded-full bg-luma-primary px-6 py-3.5 font-medium text-luma-bg transition hover:opacity-90 disabled:opacity-60"
           >
             {isSubmitting
               ? "One moment…"
@@ -180,7 +280,7 @@ export function AuthForm({ mode }: AuthFormProps) {
             type="button"
             onClick={handleDemoLogin}
             disabled={isSubmitting || isDemoSubmitting}
-            className="w-full rounded-full border border-luma-accent/35 bg-luma-peach/20 px-6 py-3.5 font-medium text-luma-primary transition hover:bg-luma-peach/30 hover:border-luma-accent shadow-sm disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full rounded-full border border-luma-accent/35 bg-luma-accent/20 px-6 py-3.5 font-medium text-luma-primary transition hover:bg-luma-accent/30 hover:border-luma-accent shadow-sm disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {isDemoSubmitting ? (
               <span>Preparing demo world…</span>

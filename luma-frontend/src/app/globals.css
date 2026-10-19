@@ -55,6 +55,105 @@
   --luma-animation-speed: 3s;
 }
 
+[data-theme="warm_dream"] {
+  --luma-bg: #FFF6EE;
+  --luma-bg-secondary: #FFF0E3;
+  --luma-primary: #4B2E4D;
+  --luma-accent: #F7A695;
+  --luma-surface: #DCC7EB;
+  --luma-muted: #C7DBC9;
+  --luma-text: #4B2E4D;
+  --luma-text-secondary: #7A5A7E;
+}
+
+[data-theme="forest_mist"] {
+  --luma-bg: #F0F5F1;
+  --luma-bg-secondary: #E5EDE6;
+  --luma-primary: #3A5A3E;
+  --luma-accent: #C7DBC9;
+  --luma-surface: #D5E5D7;
+  --luma-muted: #DCC7EB;
+  --luma-text: #2E442F;
+  --luma-text-secondary: #5A7A5D;
+}
+
+[data-theme="city_night"] {
+  --luma-bg: #1E1B2E;
+  --luma-bg-secondary: #2A2640;
+  --luma-primary: #DCC7EB;
+  --luma-accent: #F7A695;
+  --luma-surface: #352F50;
+  --luma-muted: #4A4466;
+  --luma-text: #F0EBF5;
+  --luma-text-secondary: #B8A8CC;
+}
+
+[data-theme="lavender_milk"] {
+  --luma-bg: #F5F0FA;
+  --luma-bg-secondary: #EDE5F5;
+  --luma-primary: #4B2E4D;
+  --luma-accent: #DCC7EB;
+  --luma-surface: #E8DCF2;
+  --luma-muted: #C7DBC9;
+  --luma-text: #3D2440;
+  --luma-text-secondary: #6E4F73;
+}
+
+[data-theme="ocean_light"] {
+  --luma-bg: #F0F6FA;
+  --luma-bg-secondary: #E3EFF7;
+  --luma-primary: #2E4A5D;
+  --luma-accent: #7BC4D9;
+  --luma-surface: #D0E6F0;
+  --luma-muted: #C7DBC9;
+  --luma-text: #1E3A4E;
+  --luma-text-secondary: #4E7A8E;
+}
+
+[data-theme="social_sunrise"] {
+  --luma-bg: #FFF5F2;
+  --luma-bg-secondary: #FFE8E2;
+  --luma-primary: #6B3A3A;
+  --luma-accent: #F2917D;
+  --luma-surface: #FCDAD2;
+  --luma-muted: #E8C5BD;
+  --luma-text: #5A2D2D;
+  --luma-text-secondary: #8C5252;
+}
+
+[data-theme="amber_summit"] {
+  --luma-bg: #1C1A28;
+  --luma-bg-secondary: #272438;
+  --luma-primary: #F0D9A0;
+  --luma-accent: #E8B866;
+  --luma-surface: #332F4A;
+  --luma-muted: #484364;
+  --luma-text: #F7EFE0;
+  --luma-text-secondary: #C8BA9A;
+}
+
+[data-theme="sunset_cream"] {
+  --luma-bg: #FFF6EE;
+  --luma-bg-secondary: #FFEDE0;
+  --luma-primary: #4B2E4D;
+  --luma-accent: #F7A695;
+  --luma-surface: #FDDCD3;
+  --luma-muted: #DCC7EB;
+  --luma-text: #4B2E4D;
+  --luma-text-secondary: #8A5E5A;
+}
+
+[data-theme="maker_workshop"] {
+  --luma-bg: #1A1F2A;
+  --luma-bg-secondary: #232836;
+  --luma-primary: #8CC5D0;
+  --luma-accent: #5BA4B5;
+  --luma-surface: #2C3242;
+  --luma-muted: #3F485C;
+  --luma-text: #E8F0F2;
+  --luma-text-secondary: #A0B4BA;
+}
+
 /* ---------------------------------------------------------------------------
    Base body
    --------------------------------------------------------------------------- */
@@ -123,6 +222,16 @@ html {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.luma-world-ambient,
+.luma-world-ambient *,
+.luma-rhythm-ambient-field,
+.luma-rhythm-ambient-field *,
+.luma-world-glow,
+.luma-world-motif,
+.luma-ambient-element {
+  pointer-events: none !important;
 }
 
 .luma-rhythm-ambient-field {

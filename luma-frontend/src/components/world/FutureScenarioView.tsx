@@ -18,16 +18,32 @@ export const FutureScenarioView: React.FC<FutureScenarioViewProps> = ({
       <main className="future-scenario mx-auto w-full max-w-4xl px-4 py-8 sm:px-8 sm:py-12 animate-luma-fade-in">
         {/* Navigation Bar */}
         <nav
-          className="mb-8 flex items-center justify-between border-b border-luma-primary/10 pb-4"
+          className="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-luma-primary/10 pb-4"
           aria-label="Future scenario navigation"
         >
-          <Link
-            href={`/your-world?id=${dream.id}`}
-            className="inline-flex items-center gap-2 text-sm font-medium text-luma-primary transition-opacity hover:opacity-70"
-          >
-            <span aria-hidden="true">←</span>
-            <span>Back to Your World</span>
-          </Link>
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <Link
+              href={`/your-world?id=${dream.id}`}
+              className="inline-flex items-center gap-2 font-medium text-luma-primary transition-opacity hover:opacity-70"
+            >
+              <span aria-hidden="true">←</span>
+              <span>Back to Your World</span>
+            </Link>
+            <span className="text-luma-primary/30">|</span>
+            <Link
+              href={`/daily-path?id=${dream.id}`}
+              className="font-medium text-luma-primary transition-opacity hover:opacity-70"
+            >
+              Today
+            </Link>
+            <span className="text-luma-primary/30">|</span>
+            <Link
+              href={`/journey?id=${dream.id}`}
+              className="font-medium text-luma-text-secondary transition-opacity hover:opacity-70"
+            >
+              My Journey
+            </Link>
+          </div>
           <span className="font-serif text-xs tracking-[0.2em] text-luma-primary/55">
             LUMA · FUTURE SCENARIO
           </span>
@@ -57,7 +73,7 @@ export const FutureScenarioView: React.FC<FutureScenarioViewProps> = ({
             aria-label="Morning"
           >
             <div className="flex items-center gap-3 mb-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-luma-peach/30 text-base">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-luma-accent/25 text-base">
                 🌅
               </span>
               <h2 className="font-serif text-xs font-semibold uppercase tracking-[0.2em] text-luma-text-secondary">
@@ -75,7 +91,7 @@ export const FutureScenarioView: React.FC<FutureScenarioViewProps> = ({
             aria-label="Daytime"
           >
             <div className="flex items-center gap-3 mb-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-luma-sage/30 text-base">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-luma-muted/40 text-base">
                 ☀️
               </span>
               <h2 className="font-serif text-xs font-semibold uppercase tracking-[0.2em] text-luma-text-secondary">
@@ -93,7 +109,7 @@ export const FutureScenarioView: React.FC<FutureScenarioViewProps> = ({
             aria-label="Evening"
           >
             <div className="flex items-center gap-3 mb-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-luma-lilac/40 text-base">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-luma-surface/60 text-base">
                 🌙
               </span>
               <h2 className="font-serif text-xs font-semibold uppercase tracking-[0.2em] text-luma-text-secondary">
@@ -134,7 +150,7 @@ export const FutureScenarioView: React.FC<FutureScenarioViewProps> = ({
               </Button>
             </Link>
             <Link href={`/goals?id=${dream.id}`}>
-              <Button size="lg" className="shadow-lg shadow-luma-peach/25">
+              <Button size="lg" className="shadow-lg">
                 <span>See the paths forward →</span>
               </Button>
             </Link>

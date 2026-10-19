@@ -35,10 +35,10 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
       <main className="goals-view mx-auto w-full max-w-5xl px-4 py-8 sm:px-8 sm:py-12 animate-luma-fade-in">
         {/* Navigation Bar */}
         <nav
-          className="mb-8 flex items-center justify-between border-b border-luma-primary/10 pb-4"
+          className="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-luma-primary/10 pb-4"
           aria-label="Goals navigation"
         >
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex flex-wrap items-center gap-4 text-sm">
             <Link
               href={`/future-scenario?id=${dream.id}`}
               className="inline-flex items-center gap-2 font-medium text-luma-primary transition-opacity hover:opacity-70"
@@ -53,9 +53,23 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
             >
               Your World
             </Link>
+            <span className="text-luma-primary/30">|</span>
+            <Link
+              href={`/daily-path?id=${dream.id}`}
+              className="font-medium text-luma-primary transition-opacity hover:opacity-70"
+            >
+              Today
+            </Link>
+            <span className="text-luma-primary/30">|</span>
+            <Link
+              href={`/journey?id=${dream.id}`}
+              className="font-medium text-luma-text-secondary transition-opacity hover:opacity-70"
+            >
+              My Journey
+            </Link>
           </div>
           <span className="font-serif text-xs tracking-[0.2em] text-luma-primary/55">
-            LUMA · PATHS & GAPS
+            LUMA · PATHS &amp; GAPS
           </span>
         </nav>
 
@@ -183,7 +197,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
                   </div>
 
                   {/* The Bridge / Gap */}
-                  <div className="rounded-2xl border border-luma-accent/30 bg-luma-peach/10 p-4 backdrop-blur-sm flex flex-col justify-between">
+                  <div className="rounded-2xl border border-luma-accent/30 bg-luma-accent/15 p-4 backdrop-blur-sm flex flex-col justify-between">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-luma-primary mb-1.5 flex items-center gap-1.5">
                         <span>🌉</span> The Bridge
@@ -256,7 +270,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
                                         ? "bg-emerald-100 text-emerald-800"
                                         : isSkipped
                                         ? "bg-amber-100 text-amber-800"
-                                        : "bg-luma-peach/30 text-luma-primary"
+                                        : "bg-luma-accent/25 text-luma-primary"
                                     }`}
                                   >
                                     {isCompleted ? "Tamamlandı" : isSkipped ? "Ertelendi" : "Bekliyor"}
@@ -332,7 +346,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
 
           <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href={`/daily-path?id=${dream.id}`}>
-              <Button size="lg" className="shadow-lg shadow-luma-peach/20">
+              <Button size="lg" className="shadow-lg">
                 See today&apos;s path <span aria-hidden="true">→</span>
               </Button>
             </Link>
@@ -353,7 +367,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
               </Button>
             </Link>
             <Link href="/discover">
-              <Button size="lg" className="shadow-lg shadow-luma-peach/20">
+              <Button size="lg" className="shadow-lg">
                 Imagine another possibility <span aria-hidden="true">✦</span>
               </Button>
             </Link>

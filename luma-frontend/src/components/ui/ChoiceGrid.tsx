@@ -53,17 +53,25 @@ export function ChoiceGrid<T extends string = string>({
             type="button"
             role={multiSelect ? "checkbox" : "radio"}
             aria-checked={isSelected}
+            tabIndex={0}
             onClick={() => toggleOption(option.id)}
-            className={`group relative flex flex-col items-start text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl transition-all duration-300 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-luma-accent focus-visible:ring-offset-2 select-none cursor-pointer ${
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") {
+                e.preventDefault();
+                toggleOption(option.id);
+              }
+            }}
+            className={`group relative flex flex-col items-start text-left p-4 sm:p-5 rounded-2xl sm:rounded-3xl transition-all duration-200 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-luma-accent focus-visible:ring-offset-2 select-none cursor-pointer touch-manipulation active:scale-[0.99] ${
               isSelected
-  ? "bg-luma-surface/70 shadow-md shadow-luma-primary/10 border-luma-accent translate-y-[-2px]"
-  : "bg-luma-bg-secondary/50 hover:bg-luma-surface/35 border-luma-primary/10 hover:border-luma-primary/25 hover:shadow-sm"
+                ? "bg-luma-surface/90 shadow-md shadow-luma-primary/15 border-luma-primary ring-2 ring-luma-primary/30 -translate-y-0.5"
+                : "bg-luma-bg-secondary/60 hover:bg-luma-surface/40 border-luma-primary/15 hover:border-luma-primary/30 hover:shadow-sm"
             }`}
           >
             {/* Subtle glow border when selected */}
             {isSelected && (
               <div
-className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none opacity-50 bg-gradient-to-br from-luma-accent/30 via-luma-surface/30 to-transparent"                aria-hidden="true"
+                className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none opacity-40 bg-gradient-to-br from-luma-primary/10 via-luma-accent/20 to-transparent"
+                aria-hidden="true"
               />
             )}
 
@@ -77,7 +85,7 @@ className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none opaci
                 <span
                   className={`font-medium text-base sm:text-lg transition-colors ${
                     isSelected
-                      ? "text-luma-primary font-semibold"
+                      ? "text-luma-primary font-bold"
                       : "text-luma-text group-hover:text-luma-primary"
                   }`}
                 >
@@ -87,16 +95,16 @@ className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none opaci
 
               {/* Indicator badge */}
               <div
-                className={`w-5 h-5 rounded-full flex items-center justify-center transition-all duration-300 ${
+                className={`w-5 h-5 rounded-full flex items-center justify-center transition-all duration-200 shrink-0 ${
                   isSelected
-                    ? "bg-luma-primary text-luma-bg scale-100"
-                    : "border border-luma-primary/20 opacity-40 group-hover:opacity-70 scale-90"
+                    ? "bg-luma-primary text-luma-bg ring-2 ring-luma-primary/20 scale-100 shadow-sm"
+                    : "border-2 border-luma-primary/30 group-hover:border-luma-primary/50 group-hover:scale-95"
                 }`}
                 aria-hidden="true"
               >
                 {isSelected && (
                   <svg
-                    className="w-3 h-3 stroke-current stroke-[2.5]"
+                    className="w-3.5 h-3.5 stroke-current stroke-[3]"
                     fill="none"
                     viewBox="0 0 24 24"
                   >

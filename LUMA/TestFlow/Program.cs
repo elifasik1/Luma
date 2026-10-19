@@ -9,6 +9,8 @@ using Luma.Application.Services;
 using Luma.Domain.Entities;
 using Luma.Infrastructure.AI;
 using Luma.Infrastructure.Persistence;
+using Luma.Api.Auth;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -988,6 +990,7 @@ if (args.Contains("--agent-only", StringComparer.OrdinalIgnoreCase))
     Console.WriteLine("ACTION-AWARE AGENT TESTS PASSED: action decision validation, proposal-before-mutation, approval boundary, ownership, and Gemini action safety verified.");
     await RunAdaptiveDeterministicFallbackTestsAsync();
     await RunDailyPlanSnapshotTestsAsync();
+    await RunThemePersistenceTestsAsync();
     return;
 }
 
@@ -1803,6 +1806,7 @@ static async Task RunDailyPlanSnapshotTestsAsync()
     if (!dayDetail.Actions.Select(action => action.Order).SequenceEqual(new[] { 1, 2, 3 }) ||
         dayDetail.Reflections.Single().Id != storedReflection.Id ||
         await calendarQuery.GetDayAsync(dream.Id, secondDate.AddDays(10)) is not null ||
+        await calendarQuery.GetDayAsync(dream.Id, firstDate.AddDays(-5)) is not null ||
         await calendarQuery.GetMonthAsync(Guid.NewGuid(), secondDate.Year, secondDate.Month) is not null ||
         !await repository.IsOwnedByAsync(dream.Id, user.Id) ||
         await repository.IsOwnedByAsync(dream.Id, Guid.NewGuid()))
@@ -1810,7 +1814,225 @@ static async Task RunDailyPlanSnapshotTestsAsync()
         throw new Exception("FAILURE: calendar detail ordering, empty-day behavior, or dream ownership isolation is incorrect.");
     }
 
+    // Historical duration, completion timestamps, and status accuracy verification
+    var secondDayAction1 = dayDetail.Actions.Single(action => action.Order == 1);
+    var secondDayAction2 = dayDetail.Actions.Single(action => action.Order == 2);
+    var secondDayAction3 = dayDetail.Actions.Single(action => action.Order == 3);
+
+    if (secondDayAction1.Status != "Pending" || secondDayAction1.CompletedAt is not null || secondDayAction1.EstimatedMinutes <= 0 ||
+        secondDayAction2.Status != "Skipped" || secondDayAction2.CompletedAt is not null || secondDayAction2.EstimatedMinutes <= 0 ||
+        secondDayAction3.Status != "Completed" || secondDayAction3.CompletedAt is null || secondDayAction3.EstimatedMinutes <= 0)
+    {
+        throw new Exception("FAILURE: Day detail did not preserve historical statuses, estimated duration, or completion timestamps.");
+    }
+
+    var firstDayDetail = await calendarQuery.GetDayAsync(dream.Id, firstDate)
+        ?? throw new Exception("FAILURE: Day 1 calendar detail was not returned.");
+    var firstDayHistoricalAction = firstDayDetail.Actions.Single(action => action.Order == 1);
+
+    if (firstDayHistoricalAction.Status != "Completed" ||
+        firstDayHistoricalAction.CompletedAt != originalCompletedAt ||
+        firstDayHistoricalAction.Title != originalTitle ||
+        firstDayHistoricalAction.Description != originalDescription ||
+        firstDayHistoricalAction.EstimatedMinutes != firstActionSnapshot.EstimatedMinutes ||
+        firstDayHistoricalAction.EstimatedMinutes <= 0)
+    {
+        throw new Exception("FAILURE: Prior day historical statuses, timestamps, or estimated duration were corrupted by subsequent days' actions or refreshes.");
+    }
+
     Console.WriteLine("DAILY PLAN SNAPSHOT TESTS PASSED: daily idempotency, rollover/refresh history preservation, status/adaptive synchronization, date-safe reflection association, calendar summaries/details, and ownership isolation verified.");
+}
+
+static async Task RunThemePersistenceTestsAsync()
+{
+    var options = new DbContextOptionsBuilder<LumaDbContext>()
+        .UseInMemoryDatabase(Guid.NewGuid().ToString())
+        .Options;
+
+    await using var db = new LumaDbContext(options);
+    var passwordHasher = new PasswordHasher<User>();
+    var jwtOptions = Options.Create(new JwtOptions
+    {
+        Secret = "SuperSecretKeyForLumaThemeTesting1234567890",
+        Issuer = "LumaTest",
+        Audience = "LumaTestAudience",
+        ExpirationMinutes = 60
+    });
+    var authService = new AuthService(db, passwordHasher, jwtOptions);
+    var dreamRepo = new DreamRepository(db);
+
+    // 1. User A registers with a chosen theme
+    var regResultA = await authService.RegisterAsync(
+        new RegisterRequest("User A", "user-a@example.com", "Password123456!", "forest_mist"),
+        CancellationToken.None);
+
+    if (!regResultA.Succeeded || regResultA.Authentication is null)
+    {
+        throw new Exception("FAILURE: User A registration failed.");
+    }
+
+    var userAId = regResultA.Authentication.User.Id;
+    var userAFromDb = await db.Users.FindAsync(userAId);
+    if (userAFromDb is null || !userAFromDb.ThemePreference!.Contains("forest_mist"))
+    {
+        throw new Exception("FAILURE: User A theme preference was not persisted to database.");
+    }
+
+    // 2. User A login returns their persisted theme
+    var loginResultA = await authService.LoginAsync(
+        new LoginRequest("user-a@example.com", "Password123456!"),
+        CancellationToken.None);
+    if (!loginResultA.Succeeded || !loginResultA.Authentication!.User.ThemePreference!.Contains("forest_mist"))
+    {
+        throw new Exception("FAILURE: User A login did not return persisted theme.");
+    }
+
+    var userATheme = await authService.GetUserThemeAsync(userAId, CancellationToken.None);
+    if (userATheme.Palette != "forest_mist")
+    {
+        throw new Exception($"FAILURE: GetUserThemeAsync expected 'forest_mist' but got '{userATheme.Palette}'.");
+    }
+
+    // 3. User A creates a dream with FutureProfile and ThemeConfig
+    var dreamA = new Dream
+    {
+        Id = Guid.NewGuid(),
+        UserId = userAId,
+        Title = "User A Dream",
+        Description = "Dream description",
+        FutureProfile = new FutureProfile
+        {
+            Id = Guid.NewGuid(),
+            Identity = "Creator",
+            ThemeConfig = new ThemeConfig
+            {
+                Id = Guid.NewGuid(),
+                Palette = "forest_mist",
+                Atmosphere = "calm",
+                Illustration = "dreamer",
+                Motion = "soft"
+            }
+        }
+    };
+    dreamA.FutureProfile.DreamId = dreamA.Id;
+    dreamA.FutureProfile.ThemeConfig.FutureProfileId = dreamA.FutureProfile.Id;
+    await dreamRepo.AddAsync(dreamA);
+
+    // 4. User A explicitly changes theme to city_night
+    var updateResult = await authService.UpdateUserThemeAsync(
+        userAId,
+        new UpdateThemeRequest("city_night"),
+        CancellationToken.None);
+
+    if (updateResult.Theme is null || updateResult.Theme.Palette != "city_night")
+    {
+        throw new Exception("FAILURE: Theme update to city_night failed.");
+    }
+
+    // Verify both Users and ThemeConfigs were updated
+    var refreshedUserA = await db.Users.FindAsync(userAId);
+    var refreshedDreamA = await dreamRepo.GetByIdAsync(dreamA.Id);
+    if (!refreshedUserA!.ThemePreference!.Contains("city_night") ||
+        refreshedDreamA!.FutureProfile!.ThemeConfig!.Palette != "city_night")
+    {
+        throw new Exception("FAILURE: Explicit theme change was not synchronized to Users and ThemeConfigs in database.");
+    }
+
+    // 5. Test Reflection evolution does NOT overwrite user's theme
+    var reflectionAi = new SnapshotFlowAIService();
+    var reflectionService = new ReflectionService(dreamRepo, reflectionAi);
+    await reflectionService.CreateReflectionAsync(
+        dreamA.Id,
+        new CreateReflectionRequest(
+            "I spent focused time writing code today and felt peaceful.",
+            "Reflecting on today's calm pace."),
+        CancellationToken.None);
+
+    var afterReflectionDreamA = await dreamRepo.GetByIdAsync(dreamA.Id);
+    if (afterReflectionDreamA!.FutureProfile!.ThemeConfig!.Palette != "city_night")
+    {
+        throw new Exception($"FAILURE: Reflection evolution overwrote user's theme! Expected 'city_night' but got '{afterReflectionDreamA.FutureProfile.ThemeConfig.Palette}'.");
+    }
+
+    // 6. User B registers with a different theme (isolation check)
+    var regResultB = await authService.RegisterAsync(
+        new RegisterRequest("User B", "user-b@example.com", "Password123456!", "ocean_light"),
+        CancellationToken.None);
+    if (!regResultB.Succeeded || regResultB.Authentication is null)
+    {
+        throw new Exception("FAILURE: User B registration failed.");
+    }
+    var userBId = regResultB.Authentication.User.Id;
+    var userBTheme = await authService.GetUserThemeAsync(userBId, CancellationToken.None);
+    var userAThemeCheck = await authService.GetUserThemeAsync(userAId, CancellationToken.None);
+
+    if (userBTheme.Palette != "ocean_light" || userAThemeCheck.Palette != "city_night")
+    {
+        throw new Exception($"FAILURE: User isolation failure! User B got '{userBTheme.Palette}', User A got '{userAThemeCheck.Palette}'.");
+    }
+
+    // 7. Safe fallback when theme preference is not set
+    var regResultC = await authService.RegisterAsync(
+        new RegisterRequest("User C", "user-c@example.com", "Password123456!"),
+        CancellationToken.None);
+    var userCId = regResultC.Authentication!.User.Id;
+    var userCTheme = await authService.GetUserThemeAsync(userCId, CancellationToken.None);
+    if (userCTheme.Palette != "warm_dream")
+    {
+        throw new Exception($"FAILURE: Fallback theme expected 'warm_dream' but got '{userCTheme.Palette}'.");
+    }
+
+    // 8. A Life Canvas suggestion may populate a non-explicit registration theme,
+    // but a later explicit account choice must remain authoritative.
+    var regResultD = await authService.RegisterAsync(
+        new RegisterRequest("User D", "user-d@example.com", "Password123456!"),
+        CancellationToken.None);
+    var userDId = regResultD.Authentication!.User.Id;
+    var appliedDreamTheme = await authService.ApplyDreamThemeIfNotExplicitAsync(
+        userDId,
+        new UserThemeResponse("forest_mist", "calm", "nature_dreamer", "gentle"),
+        CancellationToken.None);
+    var userDTheme = await authService.GetUserThemeAsync(userDId, CancellationToken.None);
+    if (!appliedDreamTheme || userDTheme.Palette != "forest_mist")
+    {
+        throw new Exception("FAILURE: Life Canvas theme suggestion was not applied to the user preference.");
+    }
+
+    var explicitDUpdate = await authService.UpdateUserThemeAsync(
+        userDId,
+        new UpdateThemeRequest("city_night"),
+        CancellationToken.None);
+    var blockedDreamTheme = await authService.ApplyDreamThemeIfNotExplicitAsync(
+        userDId,
+        new UserThemeResponse("ocean_light", "airy", "dreamer", "floating"),
+        CancellationToken.None);
+    var userDThemeAfterExplicitChoice = await authService.GetUserThemeAsync(
+        userDId,
+        CancellationToken.None);
+    if (explicitDUpdate.Theme?.Palette != "city_night" ||
+        blockedDreamTheme ||
+        userDThemeAfterExplicitChoice.Palette != "city_night")
+    {
+        throw new Exception("FAILURE: Explicit theme choice was overwritten by a later Life Canvas suggestion.");
+    }
+
+    // 9. Rejection of invalid theme
+    var invalidResult = await authService.UpdateUserThemeAsync(
+        userAId,
+        new UpdateThemeRequest("unsupported_neon_glow_hex"),
+        CancellationToken.None);
+    if (invalidResult.StatusCode != 400 || invalidResult.Theme is not null)
+    {
+        throw new Exception("FAILURE: Invalid palette was not rejected with 400 Bad Request.");
+    }
+
+    var finalUserATheme = await authService.GetUserThemeAsync(userAId, CancellationToken.None);
+    if (finalUserATheme.Palette != "city_night")
+    {
+        throw new Exception("FAILURE: Invalid palette update corrupted existing theme.");
+    }
+
+    Console.WriteLine("THEME PERSISTENCE AND ISOLATION TESTS PASSED: registration selection, database persistence, login recall, explicit update, reflection safety, user isolation, safe fallback, and invalid palette rejection verified.");
 }
 
 static Task<AdaptiveHarness> CreateAdaptiveHarnessAsync(params string[] statuses) =>

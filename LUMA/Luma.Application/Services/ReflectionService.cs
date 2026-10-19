@@ -108,12 +108,27 @@ public sealed class ReflectionService
             profile.Pace = evolution.FutureProfile.Pace;
             profile.Summary = evolution.Summary ?? $"Your future is evolving toward {direction}.";
 
-            profile.ThemeConfig ??= new ThemeConfig { FutureProfileId = profile.Id };
-            profile.ThemeConfig.Palette = evolution.ThemeConfig.Palette.ToString();
-            profile.ThemeConfig.Atmosphere = evolution.ThemeConfig.Atmosphere.ToString();
-            profile.ThemeConfig.Illustration = evolution.ThemeConfig.Illustration.ToString();
-            profile.ThemeConfig.Motion = evolution.ThemeConfig.Motion.ToString();
-            profile.ThemeConfig.Imagery = evolution.ThemeConfig.Imagery.ToList();
+            if (profile.ThemeConfig is null)
+            {
+                profile.ThemeConfig = new ThemeConfig
+                {
+                    FutureProfileId = profile.Id,
+                    Palette = evolution.ThemeConfig.Palette.ToString(),
+                    Atmosphere = evolution.ThemeConfig.Atmosphere.ToString(),
+                    Illustration = evolution.ThemeConfig.Illustration.ToString(),
+                    Motion = evolution.ThemeConfig.Motion.ToString(),
+                    Imagery = evolution.ThemeConfig.Imagery.ToList()
+                };
+            }
+            else
+            {
+                // Preserve user-selected theme palette, atmosphere, illustration, and motion.
+                // Evolving reflections must not overwrite the user's active theme choice.
+                if (evolution.ThemeConfig.Imagery.Count > 0 && profile.ThemeConfig.Imagery.Count == 0)
+                {
+                    profile.ThemeConfig.Imagery = evolution.ThemeConfig.Imagery.ToList();
+                }
+            }
 
             await _dreamRepository.SaveFutureProfileAsync(profile, cancellationToken);
         }

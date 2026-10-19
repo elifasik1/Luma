@@ -82,6 +82,28 @@ export interface ThemeConfigDetailsResponse {
   coreAnchorKeys: string[];
 }
 
+export interface UserThemeResponse {
+  palette: string;
+  atmosphere: string;
+  illustration: string;
+  motion: string;
+  isExplicit?: boolean;
+}
+
+export interface UpdateThemePayload {
+  palette: string;
+  atmosphere?: string;
+  illustration?: string;
+  motion?: string;
+}
+
+export interface AuthenticatedUser {
+  id: string;
+  name: string;
+  email: string;
+  themePreference?: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // GET /dreams/{dreamId}/future-scenario — Response (200 OK)
 // ---------------------------------------------------------------------------

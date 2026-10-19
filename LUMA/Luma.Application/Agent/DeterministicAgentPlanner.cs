@@ -58,23 +58,23 @@ public sealed class DeterministicAgentPlanner : IAgentPlanner
             selected.AddRange(new[] { "get_daily_plan", "get_active_goals", "get_progress" });
             reason = "Daily focus requires the existing plan, active goals, and current progress.";
         }
+        else if (progressScore > 0 && progressScore >= reflectionScore)
+        {
+            intent = "progress_review";
+            selected.AddRange(new[] { "get_progress", "get_active_goals" });
+            reason = "Progress review requires current progress and the goals that define it.";
+        }
         else if (goalScore > 0)
         {
             intent = "general_context";
             selected.Add("get_active_goals");
             reason = "The message is about the user's goals and what they are working toward.";
         }
-        else if (futureScore > 0 && futureScore >= progressScore && futureScore >= reflectionScore)
+        else if (futureScore > 0 && futureScore >= reflectionScore)
         {
             intent = "future_context";
             selected.Add("get_future_context");
             reason = "The message is primarily about the user's desired future and life context.";
-        }
-        else if (progressScore > 0 && progressScore >= reflectionScore)
-        {
-            intent = "progress_review";
-            selected.AddRange(new[] { "get_progress", "get_active_goals" });
-            reason = "Progress review requires current progress and the goals that define it.";
         }
         else if (reflectionScore > 0)
         {

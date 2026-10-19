@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/Button";
 import { DreamThemeProvider } from "@/components/world/DreamThemeProvider";
 import {
   getDreamDetails,
+  getDreamGoals,
   getJourneyCalendarDay,
   getJourneyCalendarMonth,
   getLatestDream,
 } from "@/lib/api";
 import type {
   DreamDetailsResponse,
+  GoalResponse,
   JourneyCalendarDayResponse,
   JourneyCalendarMonthResponse,
 } from "@/lib/types";
@@ -33,6 +35,7 @@ function JourneyContent() {
   const [dreamId, setDreamId] = useState<string | null>(paramDreamId);
   const initialDate = useMemo(() => new Date(), []);
   const [dream, setDream] = useState<DreamDetailsResponse | null>(null);
+  const [goals, setGoals] = useState<GoalResponse[]>([]);
   const [visibleMonth, setVisibleMonth] = useState(
     () => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1)
   );
@@ -81,6 +84,12 @@ function JourneyContent() {
       .catch((err: unknown) =>
         active && setError(err instanceof Error ? err.message : "Could not load your journey.")
       );
+
+    getDreamGoals(dreamId)
+      .then((result) => active && setGoals(result))
+      .catch(() => {
+        // Goals are supplementary for journey milestone badges
+      });
 
     return () => {
       active = false;
@@ -167,6 +176,14 @@ function JourneyContent() {
   const todayKey = localTodayKey();
   const monthLabel = visibleMonth.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
+  const goalCategoryById = new Map<string, string>(goals.map((g) => [g.id, g.category]));
+
+  const isDayHonored = Boolean(
+    selectedDay &&
+    selectedDay.actions.length > 0 &&
+    selectedDay.actions.every((action) => action.status === "Completed")
+  );
+
   return (
     <DreamThemeProvider dream={dream}>
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-8 sm:py-12 animate-luma-fade-in">
@@ -174,6 +191,7 @@ function JourneyContent() {
           <div className="flex items-center gap-4 text-sm">
             <Link href={`/daily-path?id=${dream.id}`} className="font-medium text-luma-primary transition-opacity hover:opacity-70">Today</Link>
             <Link href={`/your-world?id=${dream.id}`} className="font-medium text-luma-text-secondary transition-opacity hover:opacity-70">My Future</Link>
+            <Link href={`/goals?id=${dream.id}`} className="font-medium text-luma-text-secondary transition-opacity hover:opacity-70">Goals &amp; Gaps</Link>
           </div>
           <span className="font-serif text-xs tracking-[0.2em] text-luma-primary/55">LUMA · MY JOURNEY</span>
           <Link href={`/talk?id=${dream.id}`} className="text-sm font-medium text-luma-primary transition-opacity hover:opacity-70">Talk to LUMA ✦</Link>
@@ -203,7 +221,7 @@ function JourneyContent() {
                 const selected = key === selectedDate;
                 const isToday = key === todayKey;
                 return (
-                  <button key={key} type="button" onClick={() => selectDate(key)} className={`min-h-20 rounded-2xl border p-2 text-left transition-all sm:min-h-24 sm:p-3 ${selected ? "border-luma-accent bg-luma-peach/25 shadow-sm" : "border-luma-primary/10 bg-white/35 hover:bg-white/65"} ${isToday ? "ring-1 ring-luma-primary/35" : ""}`} aria-pressed={selected}>
+                  <button key={key} type="button" onClick={() => selectDate(key)} className={`min-h-20 rounded-2xl border p-2 text-left transition-all sm:min-h-24 sm:p-3 ${selected ? "border-luma-accent bg-luma-accent/25 shadow-sm" : "border-luma-primary/10 bg-white/35 hover:bg-white/65"} ${isToday ? "ring-1 ring-luma-primary/35" : ""}`} aria-pressed={selected}>
                     <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${isToday ? "bg-luma-primary text-white" : "text-luma-primary"}`}>{day}</span>
                     {summary?.hasSnapshot ? (
                       <span className="mt-2 block text-[10px] font-medium leading-snug text-luma-primary sm:text-xs">{summary.completedActionCount}/{summary.actionCount} done{summary.reflections.length > 0 ? " · ✦" : ""}</span>
@@ -216,19 +234,131 @@ function JourneyContent() {
         </section>
 
         <section className="mt-8 rounded-[2rem] border border-luma-primary/15 bg-white/50 p-6 shadow-[var(--luma-shadow)] backdrop-blur-md sm:p-8" aria-live="polite">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-luma-text-secondary">{new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-luma-primary/10 pb-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-luma-text-secondary">
+              {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+            </p>
+            {selectedDay && (
+              <div className="flex items-center gap-3 text-xs">
+                <span className="font-semibold text-emerald-800">
+                  {selectedDay.actions.filter((a) => a.status === "Completed").length} Done
+                </span>
+                {selectedDay.actions.some((a) => a.status === "Skipped") && (
+                  <span className="text-luma-text-secondary">
+                    {selectedDay.actions.filter((a) => a.status === "Skipped").length} Rested
+                  </span>
+                )}
+                <span className="text-luma-primary/30">·</span>
+                <span className="text-luma-text-secondary font-medium">
+                  {selectedDay.actions.length} {selectedDay.actions.length === 1 ? "step" : "steps"}
+                </span>
+              </div>
+            )}
+          </div>
+
           {isLoadingDay ? <LoadingState label="Opening this day..." compact /> : selectedDay ? (
             <div className="mt-5 space-y-4">
-              {selectedDay.actions.map((action) => (
-                <article key={action.id} className="rounded-2xl border border-luma-primary/10 bg-white/60 p-4 sm:p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className={`font-serif text-xl text-luma-primary ${action.status === "Completed" ? "line-through opacity-70" : ""}`}>{action.title}</h3><p className="mt-1 text-xs text-luma-text-secondary">{action.goalTitle} · {action.timeOfDay}</p></div><span className="rounded-full border border-luma-primary/10 bg-white px-3 py-1 text-xs font-medium text-luma-primary">{action.status}</span></div>
-                  <p className="mt-3 text-sm leading-relaxed text-luma-text-secondary">{action.description}</p>
-                  {action.intention && <p className="mt-3 border-t border-luma-primary/10 pt-3 text-xs italic text-luma-primary">✦ {action.intention}</p>}
-                </article>
-              ))}
-              {selectedDay.reflections.map((reflection) => <article key={reflection.id} className="rounded-2xl border border-luma-accent/25 bg-luma-peach/15 p-4"><p className="text-xs font-semibold text-luma-primary">✦ {reflection.mood}</p>{reflection.notes && <p className="mt-2 font-serif text-sm italic text-luma-text-secondary">“{reflection.notes}”</p>}<p className="mt-2 text-sm text-luma-primary">{reflection.insight}</p></article>)}
+              {isDayHonored && (
+                <div
+                  className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 sm:p-5 text-emerald-950 flex items-center gap-3 animate-luma-fade-in shadow-sm"
+                  role="status"
+                >
+                  <span
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white text-sm font-bold shadow-sm"
+                    aria-hidden="true"
+                  >
+                    ✓
+                  </span>
+                  <div>
+                    <p className="font-serif text-lg font-medium text-emerald-950">
+                      Day Honored ✦
+                    </p>
+                    <p className="text-xs text-emerald-800 leading-relaxed">
+                      Every intentional step chosen for this day was fulfilled. Your future took root in quiet, steady ways.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {selectedDay.actions.map((action) => {
+                const category = action.goalId ? goalCategoryById.get(action.goalId) : null;
+                const isMilestone =
+                  category?.toLowerCase() === "milestone" ||
+                  action.goalTitle?.toLowerCase().includes("milestone");
+
+                return (
+                  <article key={action.id} className="rounded-2xl border border-luma-primary/10 bg-white/60 p-4 sm:p-5 shadow-sm">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className={`font-serif text-xl text-luma-primary ${action.status === "Completed" ? "line-through opacity-70" : ""}`}>
+                            {action.title}
+                          </h3>
+                          {isMilestone && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
+                              <span aria-hidden="true">✦</span> Milestone
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-xs text-luma-text-secondary">
+                          {action.goalTitle ? `${action.goalTitle} · ` : ""}
+                          {action.timeOfDay}
+                          {action.estimatedMinutes > 0 ? ` · ${action.estimatedMinutes} min` : ""}
+                        </p>
+                      </div>
+                      <div>
+                        {action.status === "Completed" ? (
+                          <span className="rounded-full border border-emerald-500/20 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+                            ✓ Completed
+                          </span>
+                        ) : action.status === "Skipped" ? (
+                          <span className="rounded-full border border-luma-primary/10 bg-luma-surface/60 px-3 py-1 text-xs font-medium text-luma-text-secondary">
+                            ☕ Rested
+                          </span>
+                        ) : (
+                          <span className="rounded-full border border-luma-primary/10 bg-white px-3 py-1 text-xs font-medium text-luma-primary">
+                            Pending
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {action.status === "Completed" && action.completedAt && (
+                      <p className="mt-2 text-[11px] font-medium text-emerald-800/80">
+                        Completed at {new Date(action.completedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
+                    <p className="mt-3 text-sm leading-relaxed text-luma-text-secondary">{action.description}</p>
+                    {action.intention && <p className="mt-3 border-t border-luma-primary/10 pt-3 text-xs italic text-luma-primary">✦ {action.intention}</p>}
+                  </article>
+                );
+              })}
+
+              {selectedDay.reflections.length > 0 && (
+                <div className="space-y-3 pt-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-luma-text-secondary">
+                    Daily Reflections
+                  </p>
+                  {selectedDay.reflections.map((reflection) => (
+                    <article key={reflection.id} className="rounded-2xl border border-luma-accent/25 bg-luma-accent/15 p-4 sm:p-5 shadow-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-semibold text-luma-primary">✦ {reflection.mood}</p>
+                        <span className="text-[11px] text-luma-text-secondary">
+                          {new Date(reflection.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      {reflection.notes && <p className="mt-2 font-serif text-sm italic text-luma-text-secondary leading-relaxed">“{reflection.notes}”</p>}
+                      {reflection.insight && <p className="mt-2 text-sm text-luma-primary leading-relaxed">{reflection.insight}</p>}
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : <div className="mt-5 rounded-2xl border border-dashed border-luma-primary/15 bg-white/30 p-6 text-center"><p className="font-serif text-xl text-luma-primary">An open day</p><p className="mt-2 text-sm text-luma-text-secondary">No saved plan exists for this date. Nothing has been reconstructed from your current path.</p></div>}
+          ) : (
+            <div className="mt-5 rounded-2xl border border-dashed border-luma-primary/15 bg-white/30 p-6 text-center">
+              <p className="font-serif text-xl text-luma-primary">An open day</p>
+              <p className="mt-2 text-sm text-luma-text-secondary">No saved plan exists for this date. Nothing has been reconstructed from your current path.</p>
+            </div>
+          )}
         </section>
       </main>
     </DreamThemeProvider>

@@ -46,6 +46,10 @@ public class LumaDbContext : DbContext
             .IsRequired(false);
 
         modelBuilder.Entity<User>()
+            .Property(user => user.ThemePreference)
+            .IsRequired(false);
+
+        modelBuilder.Entity<User>()
             .HasMany(user => user.Dreams)
             .WithOne(dream => dream.User)
             .HasForeignKey(dream => dream.UserId)

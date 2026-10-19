@@ -36,3 +36,7 @@ Thumbs.db
 
 # Unrelated local folder
 /Luma.Application/
+
+# Local build test artifacts
+.build-test/
+.build-test-dashboard/

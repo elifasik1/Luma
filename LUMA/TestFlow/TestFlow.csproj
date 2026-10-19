@@ -10,6 +10,7 @@
     <ProjectReference Include="..\Luma.Application\Luma.Application.csproj" />
     <ProjectReference Include="..\Luma.Domain\Luma.Domain.csproj" />
     <ProjectReference Include="..\Luma.Infrastructure\Luma.Infrastructure.csproj" />
+    <ProjectReference Include="..\Luma.Api\Luma.Api.csproj" />
   </ItemGroup>
 
   <ItemGroup>

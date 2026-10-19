@@ -231,7 +231,7 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
               </h2>
             </div>
             <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-luma-peach/30 border border-luma-primary/10 px-3.5 py-1 text-xs font-semibold text-luma-primary">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-luma-accent/25 border border-luma-primary/10 px-3.5 py-1 text-xs font-semibold text-luma-primary">
                 ✓ {completed} Done
               </span>
               {skipped > 0 && (
@@ -248,7 +248,7 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
           {/* Progress Bar */}
           <div className="w-full bg-luma-primary/10 h-2.5 rounded-full overflow-hidden p-0.5 mb-4">
             <div
-              className="bg-gradient-to-r from-luma-peach via-luma-lilac to-luma-accent h-full rounded-full transition-all duration-500 ease-out"
+              className="bg-gradient-to-r from-luma-accent via-luma-surface to-luma-primary h-full rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -518,7 +518,7 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
                 type="submit"
                 size="md"
                 disabled={isSubmittingReflection}
-                className="shadow-md shadow-luma-peach/20"
+                className="shadow-md"
               >
                 {isSubmittingReflection ? (
                   <span>Listening &amp; Reflecting...</span>
@@ -560,7 +560,7 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
                       </p>
                     )}
 
-                    <div className="rounded-xl border border-luma-accent/30 bg-luma-peach/15 p-4">
+                    <div className="rounded-xl border border-luma-accent/30 bg-luma-accent/15 p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-luma-primary mb-1 flex items-center gap-1.5">
                         <span className="text-luma-accent">✦</span> How this evolves your future path
                       </p>
@@ -616,7 +616,7 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
               </Button>
             </Link>
             <Link href="/discover">
-              <Button size="lg" className="shadow-lg shadow-luma-peach/20">
+              <Button size="lg" className="shadow-lg">
                 Imagine another possibility <span aria-hidden="true">✦</span>
               </Button>
             </Link>

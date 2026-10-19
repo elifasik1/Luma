@@ -20,6 +20,9 @@ import type {
   DailyPathChangeProposal,
   JourneyCalendarMonthResponse,
   JourneyCalendarDayResponse,
+  UserThemeResponse,
+  UpdateThemePayload,
+  AuthenticatedUser,
 } from "./types";
 import { coreAnchors, dailyRhythms } from "@/theme/tokens";
 
@@ -485,5 +488,55 @@ export async function getLatestDream(): Promise<{ id: string; title: string; cre
     }
     throw new Error("Could not retrieve latest dream.");
   }
+  return response.json();
+}
+
+/**
+ * Retrieves the current authenticated user profile, including their saved theme preference.
+ */
+export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
+  try {
+    const response = await fetch("/api/auth/me", { cache: "no-store" });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Retrieves the persisted theme preference for the authenticated user.
+ */
+export async function getUserTheme(): Promise<UserThemeResponse | null> {
+  try {
+    const response = await fetch("/api/auth/theme", { cache: "no-store" });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persists an explicit theme change for the authenticated user to the backend database.
+ */
+export async function updateUserTheme(payload: UpdateThemePayload): Promise<UserThemeResponse> {
+  const response = await fetch("/api/auth/theme", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let errorMessage = "Failed to save theme preference.";
+    try {
+      const data = await response.json();
+      if (data?.error) errorMessage = data.error;
+    } catch {
+      // ignore
+    }
+    throw new Error(errorMessage);
+  }
+
   return response.json();
 }

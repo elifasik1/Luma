@@ -9,6 +9,7 @@ using Luma.Application.Services;
 using Luma.Infrastructure.AI;
 using Luma.Infrastructure.Persistence;
 using Luma.Api.Auth;
+using Luma.Api.Mcp;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -161,6 +162,7 @@ builder.Services.AddScoped<IUpdateDailyPlanTool>(sp => sp.GetRequiredService<Upd
 builder.Services.AddScoped<IAgentTool>(sp => sp.GetRequiredService<UpdateDailyPlanTool>());
 
 builder.Services.AddScoped<DemoSeeder>();
+builder.Services.AddLumaMcp();
 
 var app = builder.Build();
 
@@ -210,6 +212,37 @@ authRoutes.MapGet("/me", async (
 
     var user = await service.GetCurrentUserAsync(userId, cancellationToken);
     return user is null ? Results.Unauthorized() : Results.Ok(user);
+}).RequireAuthorization();
+
+authRoutes.MapGet("/theme", async (
+    ClaimsPrincipal principal,
+    AuthService service,
+    CancellationToken cancellationToken) =>
+{
+    if (!TryGetUserId(principal, out var userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    var theme = await service.GetUserThemeAsync(userId, cancellationToken);
+    return Results.Ok(theme);
+}).RequireAuthorization();
+
+authRoutes.MapPut("/theme", async (
+    UpdateThemeRequest request,
+    ClaimsPrincipal principal,
+    AuthService service,
+    CancellationToken cancellationToken) =>
+{
+    if (!TryGetUserId(principal, out var userId))
+    {
+        return Results.Unauthorized();
+    }
+
+    var (theme, error, statusCode) = await service.UpdateUserThemeAsync(userId, request, cancellationToken);
+    return theme is not null
+        ? Results.Ok(theme)
+        : Results.Json(new { error }, statusCode: statusCode);
 }).RequireAuthorization();
 
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Demo:Enabled", false))
@@ -286,6 +319,7 @@ dreamRoutes.MapPost("", async (
     CreateDreamRequest request,
     ClaimsPrincipal principal,
     DreamAnalysisService service,
+    AuthService authService,
     ILogger<Program> logger,
     CancellationToken cancellationToken) =>
 {
@@ -298,6 +332,16 @@ dreamRoutes.MapPost("", async (
 
         var userName = principal.FindFirstValue(ClaimTypes.Name) ?? "Dreamer";
         var result = await service.CreateDreamAsync(request, userId, userName, cancellationToken);
+
+        await authService.ApplyDreamThemeIfNotExplicitAsync(
+            userId,
+            new UserThemeResponse(
+                result.Palette,
+                result.Atmosphere,
+                result.Illustration,
+                result.Motion),
+            cancellationToken);
+
         return Results.Created($"/dreams/{result.DreamId}", result);
     }
     catch (ArgumentException ex)
@@ -646,6 +690,8 @@ agentRoutes.MapPost("/{dreamId:guid}/message", async (
         return Results.Json(new { error = "LUMA could not respond right now." }, statusCode: StatusCodes.Status500InternalServerError);
     }
 });
+
+app.MapLumaMcp("/mcp").RequireAuthorization();
 
 app.Run();
 

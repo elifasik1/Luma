@@ -30,8 +30,21 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${inter.variable} ${dmSerif.variable} h-full antialiased`}
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+              try {
+                var p = localStorage.getItem('luma_theme_palette');
+                if (p) document.documentElement.setAttribute('data-theme', p);
+              } catch(e){}
+            })()`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-luma-bg text-luma-text">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
