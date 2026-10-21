@@ -20,4 +20,5 @@ public sealed record DailyActionResponse(
     string Intention,
     int Order,
     string Status,
-    DateTime? CompletedAt);
+    DateTime? CompletedAt,
+    DateOnly ScheduledDate);

@@ -20,6 +20,7 @@ import {
   type PaletteKey,
 } from "@/theme/tokens";
 import { Button } from "@/components/ui/Button";
+import { updateDreamTargetDate } from "@/lib/api";
 
 interface WorldViewProps {
   dream: DreamDetailsResponse;
@@ -99,6 +100,18 @@ export const WorldView: React.FC<WorldViewProps> = ({
   const originalPalette = React.useRef<PaletteKey>(palette);
   const [themeSaving, setThemeSaving] = React.useState(false);
   const [themeFeedback, setThemeFeedback] = React.useState<string | null>(null);
+  const [targetDateDisplay, setTargetDateDisplay] = React.useState(() => {
+    const td = profile?.targetDate;
+    if (td) {
+      // Backend returns YYYY-MM-DD; convert to DD/MM/YYYY
+      const m = String(td).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    }
+    return profile?.targetYear ? `01/01/${profile.targetYear}` : "";
+  });
+  const [targetDateDraft, setTargetDateDraft] = React.useState(targetDateDisplay);
+  const [targetDateSaving, setTargetDateSaving] = React.useState(false);
+  const [targetDateFeedback, setTargetDateFeedback] = React.useState<string | null>(null);
 
   const openTheme = () => {
     originalPalette.current = palette;
@@ -133,6 +146,50 @@ export const WorldView: React.FC<WorldViewProps> = ({
   const logout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.replace("/login");
+  };
+
+  const saveTargetDate = async () => {
+    // Validate DD/MM/YYYY
+    const match = targetDateDraft.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!match) {
+      setTargetDateFeedback("Enter a valid date in DD/MM/YYYY format.");
+      return;
+    }
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    if (month < 1 || month > 12 || day < 1) {
+      setTargetDateFeedback("Enter a valid date in DD/MM/YYYY format.");
+      return;
+    }
+    const maxDay = new Date(year, month, 0).getDate();
+    if (day > maxDay) {
+      setTargetDateFeedback(`Invalid date: ${String(month).padStart(2, "0")} only has ${maxDay} days.`);
+      return;
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (new Date(year, month - 1, day) < today) {
+      setTargetDateFeedback("The date must be today or in the future.");
+      return;
+    }
+
+    const isoDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    setTargetDateSaving(true);
+    setTargetDateFeedback(null);
+    try {
+      const result = await updateDreamTargetDate(dream.id, isoDate);
+      // Backend returns YYYY-MM-DD, convert to DD/MM/YYYY
+      const rm = String(result.targetDate).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      const display = rm ? `${rm[3]}/${rm[2]}/${rm[1]}` : targetDateDraft;
+      setTargetDateDisplay(display);
+      setTargetDateDraft(display);
+      setTargetDateFeedback("Target date saved.");
+    } catch (error) {
+      setTargetDateFeedback(error instanceof Error ? error.message : "Could not save the target date.");
+    } finally {
+      setTargetDateSaving(false);
+    }
   };
 
   const selectedAnchors = normalizeCoreAnchorKeys(themeConfig?.coreAnchorKeys || []);
@@ -221,6 +278,7 @@ export const WorldView: React.FC<WorldViewProps> = ({
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-luma-text-secondary">The future you imagined</p>
             <h2 id="future-world-title" className="mt-2 font-serif text-3xl text-luma-primary sm:text-4xl">My future world</h2>
+            <p className="mt-2 text-sm text-luma-text-secondary">A vision for {targetDateDisplay || profile?.targetYear}</p>
           </div>
           <Link href="/discover" className="shrink-0 text-sm text-luma-primary underline decoration-luma-primary/30 underline-offset-4 hover:decoration-luma-primary">Edit your vision</Link>
         </div>
@@ -250,6 +308,15 @@ export const WorldView: React.FC<WorldViewProps> = ({
               <div className="flex flex-wrap gap-2 pt-1"><span className="rounded-full bg-luma-surface/50 px-3 py-1 capitalize">{atmosphere} atmosphere</span><span className="rounded-full bg-luma-surface/50 px-3 py-1 capitalize">{motion} motion</span><span className="rounded-full bg-luma-surface/50 px-3 py-1 capitalize">{palette.replace(/_/g, " ")}</span>{imagery.slice(0, 2).map((key) => <span key={key} className="rounded-full bg-luma-surface/50 px-3 py-1">{imageryLabels[key].emoji} {imageryLabels[key].label}</span>)}</div>
             </div>
           </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-end gap-3 rounded-2xl border border-luma-primary/10 bg-luma-surface/30 p-4">
+          <label className="block">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-luma-text-secondary">Target date (DD/MM/YYYY)</span>
+            <input type="text" placeholder="DD/MM/YYYY" value={targetDateDraft} onChange={(event) => setTargetDateDraft(event.target.value)} className="min-h-10 w-40 rounded-xl border border-luma-primary/20 bg-luma-bg px-3 text-sm text-luma-primary outline-none focus:border-luma-primary focus:ring-2 focus:ring-luma-primary/20" />
+          </label>
+          <Button size="sm" onClick={saveTargetDate} disabled={targetDateSaving}>{targetDateSaving ? "Saving…" : "Save date"}</Button>
+          {targetDateFeedback && <p role="status" className="text-xs text-luma-text-secondary">{targetDateFeedback}</p>}
         </div>
       </section>
 

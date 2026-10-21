@@ -33,7 +33,7 @@ public sealed class ReflectionService
             return null;
         }
 
-        var planDate = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+        var planDate = request.PlanDate ?? DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
         var dailyPlanSnapshot = await _dreamRepository.GetDailyPlanSnapshotAsync(
             dreamId,
             planDate,
@@ -72,6 +72,7 @@ public sealed class ReflectionService
         {
             DreamId = dreamId,
             DailyPlanSnapshotId = dailyPlanSnapshot?.Id,
+            PlanDate = planDate,
             Mood = string.IsNullOrWhiteSpace(request.Mood) ? "Reflective" : request.Mood.Trim(),
             Notes = request.Notes?.Trim() ?? string.Empty,
             Insight = aiResult.Insight,
@@ -152,7 +153,23 @@ public sealed class ReflectionService
             r.Mood,
             r.Notes,
             r.Insight,
+            r.PlanDate,
             r.CreatedAt);
+    }
+
+    public async Task<ReflectionResponse?> UpdateReflectionAsync(
+        Guid dreamId,
+        Guid reflectionId,
+        UpdateReflectionRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        var updated = await _dreamRepository.UpdateReflectionAsync(
+            dreamId,
+            reflectionId,
+            string.IsNullOrWhiteSpace(request.Mood) ? "Reflective" : request.Mood.Trim(),
+            request.Notes?.Trim() ?? string.Empty,
+            cancellationToken);
+        return updated is null ? null : MapToResponse(updated);
     }
 
     private static bool TryGetMeaningfulEnvironmentShift(

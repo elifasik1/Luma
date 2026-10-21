@@ -30,7 +30,7 @@ export async function authenticatedBackendFetch(
 ): Promise<Response> {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
-  const headers = new Headers(init.headers);
+    const headers = new Headers(init.headers);
 
   if (token) headers.set("Authorization", `Bearer ${token}`);
   if (init.body && !headers.has("Content-Type")) {

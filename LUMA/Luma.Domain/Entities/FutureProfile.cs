@@ -13,6 +13,8 @@ public class FutureProfile
     public string Mood { get; set; } = "hopeful";
     public string Pace { get; set; } = "active";
     public string? Summary { get; set; }
+    public int TargetYear { get; set; } = DateTime.UtcNow.Year;
+    public DateOnly TargetDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public ThemeConfig? ThemeConfig { get; set; }
 }

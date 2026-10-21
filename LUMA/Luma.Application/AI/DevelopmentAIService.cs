@@ -162,7 +162,7 @@ public sealed class DevelopmentAIService : IAIService
             ? string.Join(" and ", request.Values.Select(v => v.Replace('_', ' ')))
             : "clarity";
 
-        var title = $"A {char.ToUpper(pace[0])}{pace[1..]} Day in Your {char.ToUpper(env[0])}{env[1..]} Life";
+        var title = $"A {char.ToUpper(pace[0])}{pace[1..]} Day in Your {char.ToUpper(env[0])}{env[1..]} Life in {request.TargetYear}";
         var intro = $"You step into an ordinary morning where the noise has quieted down. The spaces around you reflect your rhythm, rooted in {values}.";
         var morning = $"The morning begins without urgency. Light filters into your {env} space as you prepare for the day. There is room to breathe before diving into what matters, with time for a warm cup and clear thoughts.";
         var daytime = $"During the day, your focus is dedicated to {aspirations}. You are working as a {identity}, making deliberate progress without feeling stretched thin. The hours carry a {pace} momentum where each task has purpose.";

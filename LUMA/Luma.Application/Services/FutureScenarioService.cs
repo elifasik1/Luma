@@ -29,7 +29,7 @@ public sealed class FutureScenarioService
 
         if (dream.FutureScenario is not null)
         {
-            return MapToResponse(dream.FutureScenario);
+            return MapToResponse(dream.FutureScenario, dream.FutureProfile?.TargetYear ?? TargetYearRules.CurrentYear);
         }
 
         var profile = dream.FutureProfile;
@@ -50,6 +50,7 @@ public sealed class FutureScenarioService
             Values: profile.Values,
             Mood: profile.Mood,
             Pace: profile.Pace,
+            TargetYear: profile.TargetYear,
             Atmosphere: themeConfig?.Atmosphere ?? "Calm",
             Imagery: themeConfig?.Imagery.Select(i => i.ToString()).ToList() ?? new List<string>());
 
@@ -69,10 +70,10 @@ public sealed class FutureScenarioService
 
         var saved = await _dreamRepository.AddScenarioAsync(scenario, cancellationToken);
 
-        return MapToResponse(saved);
+        return MapToResponse(saved, profile.TargetYear);
     }
 
-    private static FutureScenarioResponse MapToResponse(FutureScenario scenario)
+    private static FutureScenarioResponse MapToResponse(FutureScenario scenario, int targetYear)
     {
         return new FutureScenarioResponse(
             scenario.Id,
@@ -84,6 +85,7 @@ public sealed class FutureScenarioService
             scenario.Evening,
             scenario.EmotionalTone,
             scenario.ClosingReflection,
-            scenario.CreatedAt);
+            scenario.CreatedAt,
+            targetYear);
     }
 }

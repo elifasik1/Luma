@@ -243,32 +243,51 @@ export function ThemeProvider({
         imagery: newTheme.imagery ?? activeTheme.imagery,
       };
 
+      const previousTheme = activeTheme;
+      const previousExplicitChoice = hasUserExplicitlyChosenRef.current;
+      const previousResolvedTheme = hasResolvedThemeRef.current;
+
       if (markExplicit) {
         hasUserExplicitlyChosenRef.current = true;
         hasResolvedThemeRef.current = true;
       }
       setActiveTheme(merged);
 
-      if (markExplicit) {
-        try {
-          localStorage.setItem(STORAGE_KEY_PALETTE, merged.palette);
-          localStorage.setItem(STORAGE_KEY_EXPLICIT, "true");
-        } catch {
-          // ignore
-        }
-      }
-
       if (persist) {
         try {
-          await updateUserTheme({
+          const persistedTheme = await updateUserTheme({
             palette: merged.palette,
             atmosphere: merged.atmosphere,
             illustration: merged.illustration,
             motion: merged.motion,
           });
+          const confirmedTheme: LumaTheme = {
+            palette: normalizePalette(persistedTheme.palette),
+            atmosphere: normalizeAtmosphere(persistedTheme.atmosphere),
+            illustration: normalizeIllustration(persistedTheme.illustration),
+            motion: normalizeMotion(persistedTheme.motion),
+            imagery: merged.imagery,
+          };
+          setActiveTheme(confirmedTheme);
+          try {
+            localStorage.setItem(STORAGE_KEY_PALETTE, confirmedTheme.palette);
+            localStorage.setItem(STORAGE_KEY_EXPLICIT, "true");
+          } catch {
+            // ignore storage errors
+          }
         } catch (err) {
+          setActiveTheme(previousTheme);
+          hasUserExplicitlyChosenRef.current = previousExplicitChoice;
+          hasResolvedThemeRef.current = previousResolvedTheme;
           console.error("[LUMA Theme] Failed to persist theme change to backend:", err);
           throw err;
+        }
+      } else if (markExplicit) {
+        try {
+          localStorage.setItem(STORAGE_KEY_PALETTE, merged.palette);
+          localStorage.setItem(STORAGE_KEY_EXPLICIT, "true");
+        } catch {
+          // ignore
         }
       }
     },

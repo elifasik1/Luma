@@ -43,6 +43,8 @@ public sealed class DreamQueryService
                     futureProfile.Mood,
                     futureProfile.Pace,
                     futureProfile.Summary,
+                    futureProfile.TargetYear,
+                    futureProfile.TargetDate,
                     futureProfile.ThemeConfig is null
                         ? null
                         : new ThemeConfigDetailsResponse(

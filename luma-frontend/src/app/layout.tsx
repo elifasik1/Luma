@@ -20,6 +20,21 @@ export const metadata: Metadata = {
   title: "LUMA — See the life you want. Build it.",
   description:
     "LUMA is a future-oriented AI companion that helps you turn an imagined future into realistic goals and small actions.",
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/manifest.webmanifest",
+  applicationName: "LUMA",
+  appleWebApp: {
+    capable: true,
+    title: "LUMA",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export default function RootLayout({

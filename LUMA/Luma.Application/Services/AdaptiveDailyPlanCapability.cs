@@ -137,6 +137,7 @@ public sealed class AdaptiveDailyPlanCapability : IAdaptiveDailyPlanCapability
             new ApplyDailyPathChangeRequest(
                 proposal.KeepActionId,
                 proposal.RestActionIds),
+            null,
             cancellationToken);
     }
 }

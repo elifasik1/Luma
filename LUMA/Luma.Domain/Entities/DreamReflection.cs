@@ -7,6 +7,7 @@ public class DreamReflection
     public Dream? Dream { get; set; }
     public Guid? DailyPlanSnapshotId { get; set; }
     public DailyPlanSnapshot? DailyPlanSnapshot { get; set; }
+    public DateOnly PlanDate { get; set; }
     public string Mood { get; set; } = string.Empty;
     public string Notes { get; set; } = string.Empty;
     public string Insight { get; set; } = string.Empty;

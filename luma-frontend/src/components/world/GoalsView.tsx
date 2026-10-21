@@ -141,8 +141,8 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
                       <span aria-hidden="true">{matchingActions.length > 0 ? "🌱" : "✦"}</span>
                       <span>
                         {matchingActions.length > 0
-                          ? `Bugünkü Adımlar (${matchingActions.length})`
-                          : "Bugünkü Adımları Gör"}
+                          ? `Today's Steps (${matchingActions.length})`
+                          : "View Today's Steps"}
                       </span>
                       <span
                         aria-hidden="true"
@@ -225,20 +225,20 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
                 {isSelected && (
                   <section
                     className="mt-6 rounded-2xl border border-luma-accent/25 bg-white/70 p-5 shadow-sm backdrop-blur-md animate-luma-fade-in"
-                    aria-label={`${goal.title} ile ilişkili bugünkü adımlar`}
+                    aria-label={`${goal.title} related today's steps`}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3 mb-4 border-b border-luma-primary/10 pb-3">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-luma-accent" aria-hidden="true">✦</span>
                         <h3 className="font-serif text-sm font-semibold text-luma-primary">
-                          Bu Hedefi Destekleyen Bugünkü Adımlar
+                          Today&apos;s Steps Supporting This Goal
                         </h3>
                       </div>
                       <Link
                         href={`/daily-path?id=${dream.id}`}
                         className="text-xs font-medium text-luma-primary underline underline-offset-4 hover:opacity-75"
                       >
-                        Today ekranında görüntüle →
+                        View in Today&apos;s Path →
                       </Link>
                     </div>
 
@@ -262,7 +262,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2">
                                   <span className="text-[10px] font-semibold uppercase tracking-wider text-luma-text-secondary">
-                                    {action.timeOfDay} · {action.estimatedMinutes} dk
+                                    {action.timeOfDay} · {action.estimatedMinutes} min
                                   </span>
                                   <span
                                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
@@ -273,7 +273,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
                                         : "bg-luma-accent/25 text-luma-primary"
                                     }`}
                                   >
-                                    {isCompleted ? "Tamamlandı" : isSkipped ? "Ertelendi" : "Bekliyor"}
+                                    {isCompleted ? "Completed" : isSkipped ? "Resting" : "Pending"}
                                   </span>
                                 </div>
                                 <h4
@@ -294,7 +294,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
                                 href={`/daily-path?id=${dream.id}`}
                                 className="shrink-0 text-xs font-medium text-luma-primary underline underline-offset-2 hover:opacity-80"
                               >
-                                Today&apos;e git
+                                Go to Today&apos;s Path
                               </Link>
                             </div>
                           );
@@ -303,21 +303,21 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ dream, goals, dailyPath })
                     ) : (
                       <div className="rounded-xl border border-dashed border-luma-primary/15 bg-luma-bg/40 p-4 text-center">
                         <p className="text-xs text-luma-text-secondary leading-relaxed">
-                          Bu hedef için bugüne özel henüz bir aksiyon planlanmamış.
+                          No action is planned for this goal today yet.
                         </p>
                         <div className="mt-3 flex items-center justify-center gap-3 text-xs">
                           <Link
                             href={`/talk?id=${dream.id}`}
                             className="font-medium text-luma-primary underline underline-offset-2"
                           >
-                            LUMA ile planla
+                            Plan with LUMA
                           </Link>
                           <span className="text-luma-text-secondary">·</span>
                           <Link
                             href={`/daily-path?id=${dream.id}`}
                             className="font-medium text-luma-primary underline underline-offset-2"
                           >
-                            Today planını yenile
+                            Refresh today&apos;s plan
                           </Link>
                         </div>
                       </div>

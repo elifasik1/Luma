@@ -14,6 +14,8 @@ export interface CreateDreamRequest {
   visualWorldKey?: VisualWorldKey;
   dailyRhythmKeys?: DailyRhythmKey[];
   coreAnchorKeys?: CoreAnchorKey[];
+  targetYear?: number;
+  targetDate?: string;
 }
 
 export type VisualWorldKey =
@@ -69,6 +71,8 @@ export interface FutureProfileDetailsResponse {
   mood: string;
   pace: string;
   summary: string | null;
+  targetYear: number;
+  targetDate: string;
   themeConfig: ThemeConfigDetailsResponse | null;
 }
 
@@ -118,6 +122,7 @@ export interface FutureScenarioResponse {
   emotionalTone: string;
   closingReflection: string;
   createdAt: string;
+  targetYear: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -165,6 +170,7 @@ export interface DailyActionResponse {
   order: number;
   status: DailyActionStatus;
   completedAt: string | null;
+  scheduledDate: string;
 }
 
 export interface UpdateDailyActionStatusRequest {
@@ -189,9 +195,9 @@ export interface JourneyCalendarDaySummaryResponse {
 }
 
 export interface JourneyCalendarDayResponse {
-  snapshotId: string;
+  snapshotId: string | null;
   planDate: string;
-  generatedAt: string;
+  generatedAt: string | null;
   actions: JourneySnapshotActionResponse[];
   reflections: JourneyReflectionSummaryResponse[];
 }
@@ -224,6 +230,7 @@ export interface JourneyReflectionSummaryResponse {
 export interface CreateReflectionRequest {
   mood: string;
   notes: string;
+  planDate?: string;
 }
 
 export interface ReflectionResponse {
@@ -232,6 +239,7 @@ export interface ReflectionResponse {
   mood: string;
   notes: string;
   insight: string;
+  planDate: string;
   createdAt: string;
 }
 
@@ -290,4 +298,5 @@ export interface DiscoveryAnswers {
   dayFeel: DailyRhythmKey[];
   values: CoreAnchorKey[];
   aboutYou: string;
+  targetDate: string;
 }

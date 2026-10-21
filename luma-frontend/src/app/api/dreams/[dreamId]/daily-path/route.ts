@@ -28,9 +28,13 @@ export async function GET(
       );
     }
 
-    const data = await backendResponse.json();
-
-    return NextResponse.json(data, { status: backendResponse.status });
+    const body = await backendResponse.text();
+    return new NextResponse(body || null, {
+      status: backendResponse.status,
+      headers: {
+        "Content-Type": backendResponse.headers.get("Content-Type") ?? "application/json",
+      },
+    });
   } catch (error) {
     console.error("[LUMA API Proxy] GET /dreams/{id}/daily-path failed:", error);
 

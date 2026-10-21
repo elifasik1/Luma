@@ -15,5 +15,6 @@ public class DailyAction
     public int Order { get; set; } = 1;
     public string Status { get; set; } = "Pending";
     public DateTime? CompletedAt { get; set; }
+    public DateOnly ScheduledDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
     public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
 }

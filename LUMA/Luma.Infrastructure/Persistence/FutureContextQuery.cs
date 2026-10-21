@@ -56,7 +56,8 @@ public sealed class FutureContextQuery : IFutureContextQuery
                             theme.Imagery.Select(item => item.ToString()).ToArray(),
                             theme.Illustration,
                             theme.Motion,
-                            theme.CoreAnchorKeys.ToArray())),
+                            theme.CoreAnchorKeys.ToArray()),
+                    profile.TargetYear),
             dream.FutureScenario is null
                 ? null
                 : new FutureScenarioContext(

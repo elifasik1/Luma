@@ -1,0 +1,23 @@
+{
+  "name": "LUMA — See the life you want. Build it.",
+  "short_name": "LUMA",
+  "description": "LUMA is a future-oriented AI companion that helps you turn an imagined future into realistic goals and small actions.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f1a",
+  "theme_color": "#7c6ef0",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

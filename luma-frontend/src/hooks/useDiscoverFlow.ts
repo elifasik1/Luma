@@ -7,7 +7,30 @@ import { composeDreamDescription, createDream } from "@/lib/api";
 import type { LumaTheme } from "@/theme/ThemeProvider";
 import { dailyRhythms, type CoreAnchorKey, type DailyRhythmKey, type MotionKey } from "@/theme/tokens";
 
-export type DiscoverStep = 1 | 2 | 3 | 4;
+/** Parse DD/MM/YYYY into parts or null */
+function parseDDMMYYYY(raw: string): { day: number; month: number; year: number } | null {
+  const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || year < 1) return null;
+  const maxDay = new Date(year, month, 0).getDate();
+  if (day > maxDay) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const input = new Date(year, month - 1, day);
+  if (input < today) return null;
+  return { day, month, year };
+}
+
+/** Return today as DD/MM/YYYY */
+function formatTodayDDMMYYYY(): string {
+  const now = new Date();
+  return `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
+}
+
+export type DiscoverStep = 1 | 2 | 3 | 4 | 5;
 
 // ---------------------------------------------------------------------------
 // Visual World definitions — each lifestyle option has its own world
@@ -183,6 +206,7 @@ export function useDiscoverFlow() {
     dayFeel: [],
     values: [],
     aboutYou: "",
+    targetDate: formatTodayDDMMYYYY(),
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -191,7 +215,7 @@ export function useDiscoverFlow() {
   >("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const totalSteps = 4;
+  const totalSteps = 5;
 
   const updateLifestyle = (lifestyle: string[]) => {
     setAnswers((prev) => ({ ...prev, lifestyle }));
@@ -207,6 +231,10 @@ export function useDiscoverFlow() {
 
   const updateAboutYou = (aboutYou: string) => {
     setAnswers((prev) => ({ ...prev, aboutYou }));
+  };
+
+  const updateTargetDate = (targetDate: string) => {
+    setAnswers((prev) => ({ ...prev, targetDate }));
   };
 
   const nextStep = () => {
@@ -231,6 +259,8 @@ export function useDiscoverFlow() {
         return answers.values.length > 0;
       case 4:
         return true; // About you can be optional or short
+      case 5:
+        return parseDDMMYYYY(answers.targetDate) !== null;
       default:
         return false;
     }
@@ -248,6 +278,12 @@ export function useDiscoverFlow() {
       await new Promise((res) => setTimeout(res, 600));
       setSubmissionPhase("shaping");
 
+      const parsedDate = parseDDMMYYYY(answers.targetDate);
+      const targetYear = parsedDate ? parsedDate.year : new Date().getFullYear();
+      const targetDateISO = parsedDate
+        ? `${parsedDate.year}-${String(parsedDate.month).padStart(2, "0")}-${String(parsedDate.day).padStart(2, "0")}`
+        : undefined;
+
       // API call to Next.js proxy
       const result = await createDream({
         title,
@@ -255,6 +291,8 @@ export function useDiscoverFlow() {
         visualWorldKey: getDiscoveryVisualWorldKey(answers),
         dailyRhythmKeys: answers.dayFeel,
         coreAnchorKeys: answers.values,
+        targetYear,
+        targetDate: targetDateISO,
       });
 
       // Phase 2: Shaping
@@ -286,6 +324,7 @@ export function useDiscoverFlow() {
     updateDayFeel,
     updateValues,
     updateAboutYou,
+    updateTargetDate,
     nextStep,
     prevStep,
     canProceed,

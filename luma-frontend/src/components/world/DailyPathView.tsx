@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 interface DailyPathViewProps {
   dream: DreamDetailsResponse;
   dailyPath: DailyPathResponse;
+  planDate?: string;
 }
 
 const timeIcons: Record<string, string> = {
@@ -42,6 +43,7 @@ const moodOptions = [
 export const DailyPathView: React.FC<DailyPathViewProps> = ({
   dream,
   dailyPath: initialDailyPath,
+  planDate,
 }) => {
   const [dailyPath, setDailyPath] = useState(initialDailyPath);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -70,7 +72,7 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      const refreshed = await getDailyPath(dream.id, true);
+      const refreshed = await getDailyPath(dream.id, true, planDate);
       setDailyPath(refreshed);
     } catch (err) {
       console.error("Failed to refresh daily path:", err);
@@ -114,7 +116,7 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
 
     setUpdatingActionId(action.id);
     try {
-      await updateDailyActionStatus(dream.id, action.id, targetStatus);
+      await updateDailyActionStatus(dream.id, action.id, targetStatus, undefined, planDate);
     } catch (err) {
       console.error("Failed to update action status:", err);
       setDailyPath((prev) => ({
@@ -123,6 +125,20 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
       }));
     } finally {
       setUpdatingActionId(null);
+    }
+  };
+
+  const handleScheduleChange = async (action: DailyActionResponse, scheduledDate: string) => {
+    const previousActions = dailyPath.actions;
+    setDailyPath((prev) => ({
+      ...prev,
+      actions: prev.actions.map((item) => item.id === action.id ? { ...item, scheduledDate } : item),
+    }));
+    try {
+      await updateDailyActionStatus(dream.id, action.id, action.status, scheduledDate, planDate);
+    } catch (scheduleError) {
+      console.error("Failed to schedule daily action:", scheduleError);
+      setDailyPath((prev) => ({ ...prev, actions: previousActions }));
     }
   };
 
@@ -359,6 +375,15 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
                           <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-luma-primary/10 bg-white/70 px-3 py-1 text-xs font-semibold text-luma-primary">
                             ⏱ {action.estimatedMinutes} min
                           </span>
+                          <label className="inline-flex items-center gap-2 text-xs text-luma-text-secondary">
+                            <span>Planned for</span>
+                            <input
+                              type="date"
+                              value={action.scheduledDate}
+                              onChange={(event) => void handleScheduleChange(action, event.target.value)}
+                              className="rounded-lg border border-luma-primary/15 bg-luma-surface/70 px-2 py-1 text-luma-text"
+                            />
+                          </label>
                         </div>
 
                         <p

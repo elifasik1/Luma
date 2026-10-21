@@ -18,6 +18,8 @@ public sealed record FutureProfileDetailsResponse(
     string Mood,
     string Pace,
     string? Summary,
+    int TargetYear,
+    DateOnly TargetDate,
     ThemeConfigDetailsResponse? ThemeConfig);
 
 public sealed record ThemeConfigDetailsResponse(

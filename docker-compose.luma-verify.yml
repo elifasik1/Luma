@@ -1,0 +1,26 @@
+# Local-only disposable PostgreSQL verification database.
+# Start only after reviewing this file and .env.luma-verify.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: luma-postgres-verify
+    restart: "no"
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:55432:5432"
+    env_file:
+      - .env.luma-verify
+    volumes:
+      - luma_verify_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  luma_verify_pgdata:
+    name: luma_verify_pgdata
+

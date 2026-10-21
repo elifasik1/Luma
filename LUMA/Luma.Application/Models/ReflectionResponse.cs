@@ -6,4 +6,5 @@ public sealed record ReflectionResponse(
     string Mood,
     string Notes,
     string Insight,
+    DateOnly PlanDate,
     DateTime CreatedAt);

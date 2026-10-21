@@ -25,6 +25,7 @@ public sealed class DailyPathService
     public async Task<DailyPathResponse?> GetOrCreateDailyPathAsync(
         Guid dreamId,
         bool refresh = false,
+        DateOnly? planDate = null,
         CancellationToken cancellationToken = default)
     {
         var dream = await _dreamRepository.GetByIdAsync(dreamId, cancellationToken);
@@ -33,10 +34,11 @@ public sealed class DailyPathService
             return null;
         }
 
-        var planDate = GetCurrentPlanDate();
+        // Use provided planDate, or default to today
+        var effectivePlanDate = planDate ?? GetCurrentPlanDate();
         var currentSnapshot = await _dreamRepository.GetDailyPlanSnapshotAsync(
             dreamId,
-            planDate,
+            effectivePlanDate,
             cancellationToken);
 
         if (!refresh && currentSnapshot is not null)
@@ -53,12 +55,12 @@ public sealed class DailyPathService
             if (latestSnapshot is null)
             {
                 await _dreamRepository.AddDailyPlanSnapshotAsync(
-                    CreateSnapshot(dream.Id, planDate, dream.DailyActions),
+                    CreateSnapshot(dream.Id, effectivePlanDate, dream.DailyActions),
                     cancellationToken);
                 return MapToResponse(dream.DailyActions);
             }
 
-            if (latestSnapshot.PlanDate >= planDate)
+            if (latestSnapshot.PlanDate >= effectivePlanDate)
             {
                 return MapToResponse(dream.DailyActions);
             }
@@ -104,9 +106,10 @@ public sealed class DailyPathService
             EstimatedMinutes = item.EstimatedMinutes > 0 ? item.EstimatedMinutes : 15,
             Intention = item.Intention,
             Order = item.Order > 0 ? item.Order : order++,
+            ScheduledDate = effectivePlanDate,
         }).ToList();
 
-        var snapshot = CreateSnapshot(dream.Id, planDate, actionEntities);
+        var snapshot = CreateSnapshot(dream.Id, effectivePlanDate, actionEntities);
         var saved = await _dreamRepository.ReplaceDailyActionsAndSnapshotAsync(
             snapshot,
             actionEntities,
@@ -119,14 +122,18 @@ public sealed class DailyPathService
         Guid dreamId,
         Guid actionId,
         string status,
+        DateOnly? scheduledDate = null,
+        DateOnly? planDate = null,
         CancellationToken cancellationToken = default)
     {
         var normalizedStatus = NormalizeStatus(status);
+        var effectivePlanDate = planDate ?? GetCurrentPlanDate();
         var updated = await _dreamRepository.UpdateDailyActionStatusAsync(
             dreamId,
             actionId,
             normalizedStatus,
-            GetCurrentPlanDate(),
+            scheduledDate,
+            effectivePlanDate,
             cancellationToken);
 
         if (updated is null)
@@ -140,6 +147,7 @@ public sealed class DailyPathService
     public async Task<DailyPathResponse?> ApplyAdaptiveChangeAsync(
         Guid dreamId,
         ApplyDailyPathChangeRequest request,
+        DateOnly? planDate = null,
         CancellationToken cancellationToken = default)
     {
         if (request.KeepActionId == Guid.Empty ||
@@ -167,11 +175,12 @@ public sealed class DailyPathService
             throw new ArgumentException("The proposed actions are no longer available in today's path.", nameof(request));
         }
 
+        var effectivePlanDate = planDate ?? GetCurrentPlanDate();
         var updatedActions = await _dreamRepository.ApplyDailyPathChangeAsync(
             dreamId,
             request.KeepActionId,
             request.RestActionIds,
-            GetCurrentPlanDate(),
+            effectivePlanDate,
             cancellationToken);
         if (updatedActions is null)
         {
@@ -264,7 +273,8 @@ public sealed class DailyPathService
             a.Intention,
             a.Order,
             string.IsNullOrWhiteSpace(a.Status) ? "Pending" : a.Status,
-            a.CompletedAt);
+            a.CompletedAt,
+            a.ScheduledDate);
     }
 
     private static string GenerateMomentumMessage(int total, int completed, int skipped)

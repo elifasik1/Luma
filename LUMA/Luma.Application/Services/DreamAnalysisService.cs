@@ -103,6 +103,8 @@ public class DreamAnalysisService
 
         var selectedRhythms = ValidateDailyRhythmKeys(request);
         var selectedCoreAnchors = ValidateCoreAnchorKeys(request);
+        var targetDate = TargetYearRules.ValidateDate(request.TargetDate, request.TargetYear);
+        var targetYear = targetDate.Year;
 
         var dream = new Dream
         {
@@ -115,6 +117,8 @@ public class DreamAnalysisService
         {
             ["title"] = dream.Title,
             ["userName"] = authenticatedUserName,
+            ["targetYear"] = targetYear.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ["targetDate"] = targetDate.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture),
         };
         if (selectedRhythms.Count > 0)
         {
@@ -135,7 +139,8 @@ public class DreamAnalysisService
         dream.FutureProfile = MapFutureProfile(
             aiResult.FutureProfile,
             aiResult.Summary,
-            selectedCoreAnchors);
+            selectedCoreAnchors,
+            targetDate);
         var composedTheme = selectedVisualWorldTheme ?? aiResult.ThemeConfig;
         if (selectedVisualWorldTheme is not null && selectedRhythms.Count > 0)
         {
@@ -275,7 +280,8 @@ public class DreamAnalysisService
     private static FutureProfile MapFutureProfile(
         FutureProfileAnalysis aiProfile,
         string? summary,
-        IReadOnlyList<string> coreAnchorKeys)
+        IReadOnlyList<string> coreAnchorKeys,
+        DateOnly targetDate)
     {
         return new FutureProfile
         {
@@ -289,6 +295,8 @@ public class DreamAnalysisService
                 .ToList(),
             Mood = aiProfile.Mood,
             Pace = aiProfile.Pace,
+            TargetYear = targetDate.Year,
+            TargetDate = targetDate,
             Summary = summary ?? $"This future is shaped around a {aiProfile.Environment.Replace('_', ' ')} lifestyle, meaningful {string.Join(", ", aiProfile.Aspirations)}, and a {aiProfile.Mood} pace.",
         };
     }

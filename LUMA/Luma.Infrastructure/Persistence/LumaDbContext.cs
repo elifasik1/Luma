@@ -89,6 +89,15 @@ public class LumaDbContext : DbContext
             .Property(snapshot => snapshot.PlanDate)
             .HasColumnType("date");
 
+        modelBuilder.Entity<DailyAction>()
+            .Property(action => action.ScheduledDate)
+            .HasColumnType("date");
+
+        modelBuilder.Entity<FutureProfile>()
+            .Property(profile => profile.TargetDate)
+            .HasColumnType("date")
+            .HasDefaultValueSql("CURRENT_DATE");
+
         modelBuilder.Entity<DailyPlanSnapshot>()
             .HasIndex(snapshot => new { snapshot.DreamId, snapshot.PlanDate })
             .IsUnique();
@@ -116,6 +125,11 @@ public class LumaDbContext : DbContext
 
         modelBuilder.Entity<DreamReflection>()
             .HasIndex(reflection => reflection.DailyPlanSnapshotId);
+        modelBuilder.Entity<DreamReflection>()
+            .HasIndex(reflection => reflection.DreamId)
+            .HasDatabaseName("IX_Reflections_DreamId");
+        modelBuilder.Entity<DreamReflection>()
+            .HasIndex(reflection => new { reflection.DreamId, reflection.PlanDate });
 
         modelBuilder.Entity<FutureProfile>()
             .HasOne(futureProfile => futureProfile.ThemeConfig)

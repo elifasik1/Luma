@@ -13,9 +13,9 @@ public sealed record JourneyCalendarDaySummaryResponse(
     IReadOnlyList<JourneyReflectionSummaryResponse> Reflections);
 
 public sealed record JourneyCalendarDayResponse(
-    Guid SnapshotId,
+    Guid? SnapshotId,
     DateOnly PlanDate,
-    DateTime GeneratedAt,
+    DateTime? GeneratedAt,
     IReadOnlyList<JourneySnapshotActionResponse> Actions,
     IReadOnlyList<JourneyReflectionSummaryResponse> Reflections);
 
@@ -37,4 +37,5 @@ public sealed record JourneyReflectionSummaryResponse(
     string Mood,
     string Notes,
     string Insight,
+    DateOnly PlanDate,
     DateTime CreatedAt);

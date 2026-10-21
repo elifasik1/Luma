@@ -183,6 +183,7 @@ public class DreamRepository : IDreamRepository
         Guid dreamId,
         Guid actionId,
         string status,
+        DateOnly? scheduledDate,
         DateOnly planDate,
         CancellationToken cancellationToken = default)
     {
@@ -195,6 +196,10 @@ public class DreamRepository : IDreamRepository
         }
 
         action.Status = status;
+        if (scheduledDate.HasValue)
+        {
+            action.ScheduledDate = scheduledDate.Value;
+        }
         if (string.Equals(status, "Completed", StringComparison.OrdinalIgnoreCase))
         {
             action.CompletedAt = DateTime.UtcNow;
@@ -242,6 +247,42 @@ public class DreamRepository : IDreamRepository
         CancellationToken cancellationToken = default)
     {
         await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<FutureProfile?> UpdateTargetYearAsync(
+        Guid dreamId,
+        int targetYear,
+        CancellationToken cancellationToken = default)
+    {
+        var profile = await _dbContext.FutureProfiles
+            .FirstOrDefaultAsync(item => item.DreamId == dreamId, cancellationToken);
+        if (profile is null)
+        {
+            return null;
+        }
+
+        profile.TargetYear = targetYear;
+        profile.TargetDate = new DateOnly(targetYear, 1, 1);
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return profile;
+    }
+
+    public async Task<FutureProfile?> UpdateTargetDateAsync(
+        Guid dreamId,
+        DateOnly targetDate,
+        CancellationToken cancellationToken = default)
+    {
+        var profile = await _dbContext.FutureProfiles
+            .FirstOrDefaultAsync(item => item.DreamId == dreamId, cancellationToken);
+        if (profile is null)
+        {
+            return null;
+        }
+
+        profile.TargetDate = targetDate;
+        profile.TargetYear = targetDate.Year;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return profile;
     }
 
     public async Task<IReadOnlyList<DailyAction>?> ApplyDailyPathChangeAsync(
@@ -317,6 +358,27 @@ public class DreamRepository : IDreamRepository
             .Where(r => r.DreamId == dreamId)
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(cancellationToken);
+    }
+
+    public Task<DreamReflection?> GetReflectionAsync(Guid dreamId, Guid reflectionId, CancellationToken cancellationToken = default) =>
+        _dbContext.Reflections.FirstOrDefaultAsync(
+            reflection => reflection.DreamId == dreamId && reflection.Id == reflectionId,
+            cancellationToken);
+
+    public async Task<DreamReflection?> UpdateReflectionAsync(
+        Guid dreamId,
+        Guid reflectionId,
+        string mood,
+        string notes,
+        CancellationToken cancellationToken = default)
+    {
+        var reflection = await GetReflectionAsync(dreamId, reflectionId, cancellationToken);
+        if (reflection is null) return null;
+
+        reflection.Mood = mood;
+        reflection.Notes = notes;
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        return reflection;
     }
 
     private static bool IsDailyPlanDateConflict(Exception exception)

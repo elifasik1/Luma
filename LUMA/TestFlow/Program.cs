@@ -320,7 +320,8 @@ if (args.Contains("--agent-only", StringComparer.OrdinalIgnoreCase))
                 "Focus",
                 1,
                 "Pending",
-                null),
+                null,
+                DateOnly.FromDateTime(DateTime.UtcNow)),
             new DailyActionResponse(
                 restActionId,
                 agentOnlyDreamA,
@@ -333,7 +334,8 @@ if (args.Contains("--agent-only", StringComparer.OrdinalIgnoreCase))
                 "Recover",
                 2,
                 "Skipped",
-                null)
+                null,
+                DateOnly.FromDateTime(DateTime.UtcNow))
         },
         DateTime.UtcNow,
         2,
@@ -2177,11 +2179,40 @@ sealed class InMemoryAdaptiveDreamRepository : IDreamRepository
         return Task.FromResult<IReadOnlyList<DailyAction>>(_dream.DailyActions);
     }
 
-    public Task<DailyAction?> UpdateDailyActionStatusAsync(Guid dreamId, Guid actionId, string status, DateOnly planDate, CancellationToken cancellationToken = default) =>
-        Task.FromResult<DailyAction?>(null);
+    public Task<DailyAction?> UpdateDailyActionStatusAsync(Guid dreamId, Guid actionId, string status, DateOnly? scheduledDate, DateOnly planDate, CancellationToken cancellationToken = default)
+    {
+        var action = _dream.DailyActions.FirstOrDefault(item => item.DreamId == dreamId && item.Id == actionId);
+        if (action is null) return Task.FromResult<DailyAction?>(null);
+        action.Status = status;
+        if (scheduledDate.HasValue) action.ScheduledDate = scheduledDate.Value;
+        return Task.FromResult<DailyAction?>(action);
+    }
 
     public Task SaveFutureProfileAsync(FutureProfile profile, CancellationToken cancellationToken = default) =>
         Task.CompletedTask;
+
+    public Task<FutureProfile?> UpdateTargetYearAsync(Guid dreamId, int targetYear, CancellationToken cancellationToken = default)
+    {
+        if (_dream.Id != dreamId || _dream.FutureProfile is null)
+        {
+            return Task.FromResult<FutureProfile?>(null);
+        }
+
+        _dream.FutureProfile.TargetYear = targetYear;
+        return Task.FromResult<FutureProfile?>(_dream.FutureProfile);
+    }
+
+    public Task<FutureProfile?> UpdateTargetDateAsync(Guid dreamId, DateOnly targetDate, CancellationToken cancellationToken = default)
+    {
+        if (_dream.Id != dreamId || _dream.FutureProfile is null)
+        {
+            return Task.FromResult<FutureProfile?>(null);
+        }
+
+        _dream.FutureProfile.TargetDate = targetDate;
+        _dream.FutureProfile.TargetYear = targetDate.Year;
+        return Task.FromResult<FutureProfile?>(_dream.FutureProfile);
+    }
 
     public Task<IReadOnlyList<DailyAction>?> ApplyDailyPathChangeAsync(
         Guid dreamId,
@@ -2214,6 +2245,18 @@ sealed class InMemoryAdaptiveDreamRepository : IDreamRepository
 
     public Task<IReadOnlyList<DreamReflection>> GetReflectionsAsync(Guid dreamId, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<DreamReflection>>(_dream.Reflections);
+
+    public Task<DreamReflection?> GetReflectionAsync(Guid dreamId, Guid reflectionId, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_dream.Reflections.FirstOrDefault(reflection => reflection.DreamId == dreamId && reflection.Id == reflectionId));
+
+    public Task<DreamReflection?> UpdateReflectionAsync(Guid dreamId, Guid reflectionId, string mood, string notes, CancellationToken cancellationToken = default)
+    {
+        var reflection = _dream.Reflections.FirstOrDefault(item => item.DreamId == dreamId && item.Id == reflectionId);
+        if (reflection is null) return Task.FromResult<DreamReflection?>(null);
+        reflection.Mood = mood;
+        reflection.Notes = notes;
+        return Task.FromResult<DreamReflection?>(reflection);
+    }
 }
 
 sealed class NullProposalAIService : IAIService

@@ -376,6 +376,46 @@ dreamRoutes.MapGet("/{dreamId:guid}", async (Guid dreamId, DreamQueryService ser
     return Results.Ok(response);
 });
 
+dreamRoutes.MapPut("/{dreamId:guid}/target-year", async (
+    Guid dreamId,
+    UpdateTargetYearRequest request,
+    IDreamRepository repository,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var targetYear = TargetYearRules.Validate(request.TargetYear);
+        var profile = await repository.UpdateTargetYearAsync(dreamId, targetYear, cancellationToken);
+        return profile is null
+            ? Results.NotFound(new { error = "Future profile not found." })
+            : Results.Ok(new { targetYear = profile.TargetYear });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
+dreamRoutes.MapPut("/{dreamId:guid}/target-date", async (
+    Guid dreamId,
+    UpdateTargetDateRequest request,
+    IDreamRepository repository,
+    CancellationToken cancellationToken) =>
+{
+    try
+    {
+        var targetDate = TargetYearRules.ValidateDate(request.TargetDate);
+        var profile = await repository.UpdateTargetDateAsync(dreamId, targetDate, cancellationToken);
+        return profile is null
+            ? Results.NotFound(new { error = "Future profile not found." })
+            : Results.Ok(new { targetDate = profile.TargetDate, targetYear = profile.TargetYear });
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+});
+
 dreamRoutes.MapGet("/{dreamId:guid}/future-scenario", async (
     Guid dreamId,
     FutureScenarioService service,
@@ -447,11 +487,12 @@ dreamRoutes.MapGet("/{dreamId:guid}/daily-path", async (
     DailyPathService service,
     ILogger<Program> logger,
     CancellationToken cancellationToken,
-    bool refresh = false) =>
+    bool refresh = false,
+    DateOnly? planDate = null) =>
 {
     try
     {
-        var response = await service.GetOrCreateDailyPathAsync(dreamId, refresh, cancellationToken);
+        var response = await service.GetOrCreateDailyPathAsync(dreamId, refresh, planDate, cancellationToken);
         if (response is null)
         {
             return Results.NotFound(new { error = "Dream not found." });
@@ -485,7 +526,7 @@ dreamRoutes.MapPost("/{dreamId:guid}/daily-path/adaptive-change", async (
 {
     try
     {
-        var response = await service.ApplyAdaptiveChangeAsync(dreamId, request, cancellationToken);
+        var response = await service.ApplyAdaptiveChangeAsync(dreamId, request, null, cancellationToken);
         return response is null
             ? Results.NotFound(new { error = "Dream not found." })
             : Results.Ok(response);
@@ -512,11 +553,12 @@ dreamRoutes.MapPatch("/{dreamId:guid}/daily-actions/{actionId:guid}", async (
     UpdateDailyActionStatusRequest request,
     DailyPathService service,
     ILogger<Program> logger,
-    CancellationToken cancellationToken) =>
+    CancellationToken cancellationToken,
+    DateOnly? planDate = null) =>
 {
     try
     {
-        var response = await service.UpdateActionStatusAsync(dreamId, actionId, request.Status, cancellationToken);
+        var response = await service.UpdateActionStatusAsync(dreamId, actionId, request.Status, request.ScheduledDate, planDate, cancellationToken);
         if (response is null)
         {
             return Results.NotFound(new { error = "Daily action not found." });
@@ -604,6 +646,19 @@ dreamRoutes.MapGet("/{dreamId:guid}/reflections", async (
 {
     var responses = await service.GetReflectionsAsync(dreamId, cancellationToken);
     return Results.Ok(responses);
+});
+
+dreamRoutes.MapPut("/{dreamId:guid}/reflections/{reflectionId:guid}", async (
+    Guid dreamId,
+    Guid reflectionId,
+    UpdateReflectionRequest request,
+    ReflectionService service,
+    CancellationToken cancellationToken) =>
+{
+    var response = await service.UpdateReflectionAsync(dreamId, reflectionId, request, cancellationToken);
+    return response is null
+        ? Results.NotFound(new { error = "Reflection not found." })
+        : Results.Ok(response);
 });
 
 dreamRoutes.MapPost("/{dreamId:guid}/conversation", async (

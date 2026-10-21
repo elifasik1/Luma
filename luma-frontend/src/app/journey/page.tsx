@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,8 @@ import {
   getJourneyCalendarDay,
   getJourneyCalendarMonth,
   getLatestDream,
+  createReflection,
+  updateReflection,
 } from "@/lib/api";
 import type {
   DreamDetailsResponse,
@@ -27,24 +29,33 @@ function dateKey(year: number, monthIndex: number, day: number) {
 
 function localTodayKey() {
   const today = new Date();
+  // Use local date components to avoid UTC timezone shifts
   return dateKey(today.getFullYear(), today.getMonth(), today.getDate());
 }
 
 function JourneyContent() {
   const paramDreamId = useSearchParams().get("id");
   const [dreamId, setDreamId] = useState<string | null>(paramDreamId);
-  const initialDate = useMemo(() => new Date(), []);
   const [dream, setDream] = useState<DreamDetailsResponse | null>(null);
+  const hasInitializedTargetDate = useRef(false);
+  /** The full target date key (YYYY-MM-DD) from API, stored for month navigation. */
+  const targetDateKeyRef = useRef<string | null>(null);
   const [goals, setGoals] = useState<GoalResponse[]>([]);
   const [visibleMonth, setVisibleMonth] = useState(
-    () => new Date(initialDate.getFullYear(), initialDate.getMonth(), 1)
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
   );
   const [calendar, setCalendar] = useState<JourneyCalendarMonthResponse | null>(null);
+  // Default to today's date; will be updated to target date if available
   const [selectedDate, setSelectedDate] = useState(localTodayKey);
   const [selectedDay, setSelectedDay] = useState<JourneyCalendarDayResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingDay, setIsLoadingDay] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reflectionDraft, setReflectionDraft] = useState("");
+  const [reflectionMood, setReflectionMood] = useState("Reflective");
+  const [editingReflectionId, setEditingReflectionId] = useState<string | null>(null);
+  const [isSavingReflection, setIsSavingReflection] = useState(false);
+  const [reflectionMessage, setReflectionMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (paramDreamId || dreamId) {
@@ -73,14 +84,52 @@ function JourneyContent() {
     return () => {
       active = false;
     };
-  }, [paramDreamId]);
+  }, [paramDreamId, dreamId]);
 
   useEffect(() => {
     if (!dreamId) return;
     let active = true;
 
     getDreamDetails(dreamId)
-      .then((result) => active && setDream(result))
+      .then((result) => {
+        if (!active) return;
+
+        setDream(result);
+
+        const targetDateStr = result.futureProfile?.targetDate;
+        const targetYear = result.futureProfile?.targetYear;
+        if (!hasInitializedTargetDate.current && targetDateStr) {
+          hasInitializedTargetDate.current = true;
+          // targetDate from API is YYYY-MM-DD
+          const dm = String(targetDateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (dm) {
+            const ty = Number(dm[1]);
+            const tm = Number(dm[2]) - 1; // 0-indexed
+            const td = Number(dm[3]);
+            const targetKey = dateKey(ty, tm, td);
+            targetDateKeyRef.current = targetKey;
+            // Initialize calendar to target date month and select target day
+            setVisibleMonth(new Date(ty, tm, 1));
+            setSelectedDate(targetKey);
+          } else if (typeof targetYear === "number" && Number.isInteger(targetYear)) {
+            // targetDate string was not parseable; fall back to targetYear Jan 1
+            const monthIndex = 0;
+            const day = 1;
+            const targetKey = dateKey(targetYear, monthIndex, day);
+            targetDateKeyRef.current = targetKey;
+            setVisibleMonth(new Date(targetYear, monthIndex, 1));
+            setSelectedDate(targetKey);
+          }
+        } else if (!hasInitializedTargetDate.current && typeof targetYear === "number" && Number.isInteger(targetYear)) {
+          hasInitializedTargetDate.current = true;
+          const monthIndex = 0;
+          const day = 1;
+          const targetKey = dateKey(targetYear, monthIndex, day);
+          targetDateKeyRef.current = targetKey;
+          setVisibleMonth(new Date(targetYear, monthIndex, 1));
+          setSelectedDate(targetKey);
+        }
+      })
       .catch((err: unknown) =>
         active && setError(err instanceof Error ? err.message : "Could not load your journey.")
       );
@@ -97,7 +146,7 @@ function JourneyContent() {
   }, [dreamId]);
 
   useEffect(() => {
-    if (!dreamId) return;
+    if (!dreamId || !dream) return;
     let active = true;
 
     getJourneyCalendarMonth(
@@ -114,14 +163,22 @@ function JourneyContent() {
     return () => {
       active = false;
     };
-  }, [dreamId, visibleMonth]);
+  }, [dream, dreamId, visibleMonth]);
 
   useEffect(() => {
     if (!dreamId || !calendar) return;
     let active = true;
 
     getJourneyCalendarDay(dreamId, selectedDate)
-      .then((result) => active && setSelectedDay(result))
+      .then((result) => {
+        if (!active) return;
+        setSelectedDay(result);
+        const existing = result?.reflections[0];
+        setReflectionDraft(existing?.notes ?? "");
+        setReflectionMood(existing?.mood ?? "Reflective");
+        setEditingReflectionId(existing?.id ?? null);
+        setReflectionMessage(null);
+      })
       .catch((err: unknown) =>
         active && setError(err instanceof Error ? err.message : "Could not load this day.")
       )
@@ -132,6 +189,42 @@ function JourneyContent() {
     };
   }, [calendar, dreamId, selectedDate]);
 
+  const saveReflection = async () => {
+    if (!dreamId || !reflectionDraft.trim()) return;
+    setIsSavingReflection(true);
+    setReflectionMessage(null);
+    try {
+      if (editingReflectionId) {
+        await updateReflection(dreamId, editingReflectionId, {
+          mood: reflectionMood,
+          notes: reflectionDraft.trim(),
+        });
+      } else {
+        await createReflection(dreamId, {
+          mood: reflectionMood,
+          notes: reflectionDraft.trim(),
+          planDate: selectedDate,
+        });
+      }
+      const refreshed = await getJourneyCalendarDay(dreamId, selectedDate);
+      setSelectedDay(refreshed);
+      const existing = refreshed?.reflections[0];
+      setReflectionDraft(existing?.notes ?? "");
+      setReflectionMood(existing?.mood ?? "Reflective");
+      setEditingReflectionId(existing?.id ?? null);
+      await getJourneyCalendarMonth(dreamId, visibleMonth.getFullYear(), visibleMonth.getMonth() + 1)
+        .then(setCalendar);
+      setReflectionMessage("Reflection saved.");
+    } catch (saveError) {
+      setReflectionMessage(saveError instanceof Error ? saveError.message : "Could not save reflection.");
+    } finally {
+      setIsSavingReflection(false);
+    }
+  };
+
+  /** Navigate to an adjacent month. When landing on the target date's month,
+   *  auto-select the target day; on today's month, auto-select today;
+   *  otherwise select the 1st. */
   const selectMonth = (offset: number) => {
     const next = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + offset, 1);
     setIsLoading(true);
@@ -139,12 +232,28 @@ function JourneyContent() {
     setSelectedDay(null);
     setError(null);
     setVisibleMonth(next);
+
     const today = new Date();
-    setSelectedDate(
-      next.getFullYear() === today.getFullYear() && next.getMonth() === today.getMonth()
-        ? localTodayKey()
-        : dateKey(next.getFullYear(), next.getMonth(), 1)
-    );
+    const nextY = next.getFullYear();
+    const nextM = next.getMonth();
+
+    // Check if the target date falls in this month
+    if (targetDateKeyRef.current) {
+      const tm = targetDateKeyRef.current.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (tm && Number(tm[1]) === nextY && Number(tm[2]) - 1 === nextM) {
+        setSelectedDate(targetDateKeyRef.current);
+        return;
+      }
+    }
+
+    // Check if today falls in this month
+    if (nextY === today.getFullYear() && nextM === today.getMonth()) {
+      setSelectedDate(localTodayKey());
+      return;
+    }
+
+    // Default to the 1st
+    setSelectedDate(dateKey(nextY, nextM, 1));
   };
 
   const selectDate = (value: string) => {
@@ -189,7 +298,7 @@ function JourneyContent() {
       <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-8 sm:py-12 animate-luma-fade-in">
         <nav className="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-luma-primary/10 pb-4" aria-label="My Journey navigation">
           <div className="flex items-center gap-4 text-sm">
-            <Link href={`/daily-path?id=${dream.id}`} className="font-medium text-luma-primary transition-opacity hover:opacity-70">Today</Link>
+            <Link href={`/daily-path?id=${dream.id}&date=${selectedDate}`} className="font-medium text-luma-primary transition-opacity hover:opacity-70">Today</Link>
             <Link href={`/your-world?id=${dream.id}`} className="font-medium text-luma-text-secondary transition-opacity hover:opacity-70">My Future</Link>
             <Link href={`/goals?id=${dream.id}`} className="font-medium text-luma-text-secondary transition-opacity hover:opacity-70">Goals &amp; Gaps</Link>
           </div>
@@ -201,6 +310,14 @@ function JourneyContent() {
           <p className="mb-3 text-xs font-semibold uppercase tracking-[0.22em] text-luma-text-secondary">A record of your gentle progress</p>
           <h1 className="font-serif text-4xl tracking-tight text-luma-primary sm:text-5xl">My Journey</h1>
           <p className="mt-3 font-serif text-lg italic leading-relaxed text-luma-text-secondary">The steps you chose, held in their own time.</p>
+          <p className="mt-3 text-sm text-luma-text-secondary">Your vision for {(() => {
+            const td = dream.futureProfile?.targetDate;
+            if (td) {
+              const m = String(td).match(/^(\d{4})-(\d{2})-(\d{2})/);
+              if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+            }
+            return dream.futureProfile?.targetYear ?? year;
+          })()}</p>
         </header>
 
         <section className="rounded-[2rem] border border-luma-primary/15 bg-white/55 p-4 shadow-[var(--luma-shadow)] backdrop-blur-md sm:p-7" aria-label="Journey calendar">
@@ -236,7 +353,15 @@ function JourneyContent() {
         <section className="mt-8 rounded-[2rem] border border-luma-primary/15 bg-white/50 p-6 shadow-[var(--luma-shadow)] backdrop-blur-md sm:p-8" aria-live="polite">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-luma-primary/10 pb-3">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-luma-text-secondary">
-              {new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              {(() => {
+                const dm = selectedDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                if (dm) {
+                  const [, year, month, day] = dm;
+                  const date = new Date(Number(year), Number(month) - 1, Number(day));
+                  return date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+                }
+                return selectedDate;
+              })()}
             </p>
             {selectedDay && (
               <div className="flex items-center gap-3 text-xs">
@@ -258,6 +383,25 @@ function JourneyContent() {
 
           {isLoadingDay ? <LoadingState label="Opening this day..." compact /> : selectedDay ? (
             <div className="mt-5 space-y-4">
+              <div className="rounded-2xl border border-luma-accent/25 bg-luma-surface/50 p-4 sm:p-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="font-serif text-xl text-luma-primary">
+                    {editingReflectionId ? "Edit your reflection" : "Write a reflection"}
+                  </h3>
+                  {reflectionMessage && <span className="text-xs text-luma-text-secondary" role="status">{reflectionMessage}</span>}
+                </div>
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                  <select value={reflectionMood} onChange={(event) => setReflectionMood(event.target.value)} className="rounded-xl border border-luma-primary/15 bg-luma-surface px-3 py-2 text-sm text-luma-text">
+                    {['Reflective', 'Grounded', 'Energized', 'Peaceful', 'Challenging'].map((mood) => <option key={mood}>{mood}</option>)}
+                  </select>
+                  <textarea value={reflectionDraft} onChange={(event) => setReflectionDraft(event.target.value)} rows={4} maxLength={4000} placeholder="What did you notice about this day?" className="min-h-24 flex-1 rounded-xl border border-luma-primary/15 bg-luma-surface/70 px-3 py-2 text-sm text-luma-text placeholder:text-luma-text-secondary/60 focus:border-luma-accent focus:outline-none" />
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <Button type="button" size="sm" disabled={!reflectionDraft.trim() || isSavingReflection} onClick={() => void saveReflection()}>
+                    {isSavingReflection ? "Saving..." : editingReflectionId ? "Save changes" : "Save reflection"}
+                  </Button>
+                </div>
+              </div>
               {isDayHonored && (
                 <div
                   className="rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-4 sm:p-5 text-emerald-950 flex items-center gap-3 animate-luma-fade-in shadow-sm"

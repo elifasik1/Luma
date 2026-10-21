@@ -11,5 +11,6 @@ public sealed record GenerateFutureScenarioRequest(
     IReadOnlyList<string> Values,
     string Mood,
     string Pace,
+    int TargetYear,
     string Atmosphere,
     IReadOnlyList<string> Imagery);

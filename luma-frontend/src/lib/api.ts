@@ -98,6 +98,19 @@ export async function createDream(
   return response.json();
 }
 
+export async function updateDreamTargetDate(dreamId: string, targetDate: string): Promise<{ targetDate: string; targetYear: number }> {
+  const response = await fetch(`/api/dreams/${encodeURIComponent(dreamId)}/target-date`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targetDate }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error ?? `Failed to save target date (${response.status})`);
+  }
+  return response.json();
+}
+
 /**
  * Fetches the persisted dream details by ID through the Next.js API proxy.
  */
@@ -191,14 +204,19 @@ export async function getDreamGoals(
 /**
  * Fetches or generates the daily path actions by dream ID.
  * Pass refresh=true to regenerate actions.
+ * Pass planDate to get actions for a specific date (defaults to today if not provided).
  */
 export async function getDailyPath(
   dreamId: string,
-  refresh = false
+  refresh = false,
+  planDate?: string
 ): Promise<DailyPathResponse> {
-  const queryString = refresh ? "?refresh=true" : "";
+  const params = new URLSearchParams();
+  if (refresh) params.set("refresh", "true");
+  if (planDate) params.set("planDate", planDate);
+  const queryString = params.toString();
   const response = await fetch(
-    `/api/dreams/${encodeURIComponent(dreamId)}/daily-path${queryString}`,
+    `/api/dreams/${encodeURIComponent(dreamId)}/daily-path${queryString ? `?${queryString}` : ""}`,
     {
       headers: {
         "Content-Type": "application/json",
@@ -281,16 +299,20 @@ export async function getJourneyCalendarDay(
 export async function updateDailyActionStatus(
   dreamId: string,
   actionId: string,
-  status: "Pending" | "Completed" | "Skipped"
+  status: "Pending" | "Completed" | "Skipped",
+  scheduledDate?: string,
+  planDate?: string
 ): Promise<DailyActionResponse> {
+  const params = new URLSearchParams();
+  if (planDate) params.set("planDate", planDate);
   const response = await fetch(
-    `/api/dreams/${encodeURIComponent(dreamId)}/daily-actions/${encodeURIComponent(actionId)}`,
+    `/api/dreams/${encodeURIComponent(dreamId)}/daily-actions/${encodeURIComponent(actionId)}${params.toString() ? `?${params.toString()}` : ""}`,
     {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, scheduledDate }),
     }
   );
 
@@ -341,6 +363,26 @@ export async function createReflection(
     throw new Error(errorMessage);
   }
 
+  return response.json();
+}
+
+export async function updateReflection(
+  dreamId: string,
+  reflectionId: string,
+  payload: Omit<CreateReflectionRequest, "planDate">
+): Promise<ReflectionResponse> {
+  const response = await fetch(
+    `/api/dreams/${encodeURIComponent(dreamId)}/reflections/${encodeURIComponent(reflectionId)}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  );
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.error ?? `Failed to update reflection (${response.status})`);
+  }
   return response.json();
 }
 

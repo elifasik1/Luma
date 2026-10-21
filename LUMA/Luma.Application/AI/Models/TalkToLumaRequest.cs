@@ -26,7 +26,8 @@ public sealed record FutureProfileConversationContext(
     IReadOnlyList<string> Values,
     string Mood,
     string Pace,
-    string? Summary);
+    string? Summary,
+    int TargetYear);
 
 public sealed record FutureScenarioConversationContext(
     string Title,

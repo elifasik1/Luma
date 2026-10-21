@@ -63,6 +63,7 @@ export const FutureScenarioView: React.FC<FutureScenarioViewProps> = ({
           <p className="mt-4 font-serif text-lg italic text-luma-text-secondary sm:text-xl leading-relaxed">
             “{scenario.intro}”
           </p>
+          <p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-luma-text-secondary">A possible day in {scenario.targetYear}</p>
         </header>
 
         {/* Storyline Flow: Morning / Daytime / Evening */}

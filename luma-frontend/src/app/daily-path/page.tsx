@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 function DailyPathContent() {
   const searchParams = useSearchParams();
   const dreamId = searchParams.get("id");
+  const dateParam = searchParams.get("date");
 
   const [dream, setDream] = useState<DreamDetailsResponse | null>(null);
   const [dailyPath, setDailyPath] = useState<DailyPathResponse | null>(null);
@@ -43,8 +44,13 @@ function DailyPathContent() {
         if (!isMounted) return;
         setDream(dreamData);
 
-        const dailyPathData = await getDailyPath(currentDreamId);
-        if (isMounted) setDailyPath(dailyPathData);
+        // Use date parameter if provided, otherwise default to target date or today
+        const planDate = dateParam || dreamData.futureProfile?.targetDate || undefined;
+
+        const dailyPathData = await getDailyPath(currentDreamId, false, planDate);
+        if (isMounted) {
+          setDailyPath(dailyPathData);
+        }
       } catch (err: unknown) {
         if (isMounted) {
           setError(
@@ -63,7 +69,9 @@ function DailyPathContent() {
     return () => {
       isMounted = false;
     };
-  }, [dreamId]);
+  }, [dreamId, dateParam]);
+
+  const planDate = dateParam || dream?.futureProfile?.targetDate || undefined;
 
   if (!dream && isLoading) {
     return (
@@ -140,7 +148,7 @@ function DailyPathContent() {
           </Link>
         </div>
       ) : (
-        <DailyPathView dream={dream} dailyPath={dailyPath} />
+        <DailyPathView dream={dream} dailyPath={dailyPath} planDate={planDate} />
       )}
     </DreamThemeProvider>
   );

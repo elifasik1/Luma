@@ -53,7 +53,7 @@ public sealed class TalkToLumaService
         {
             try
             {
-                await _dailyPathService.GetOrCreateDailyPathAsync(dreamId, refresh: false, cancellationToken);
+                await _dailyPathService.GetOrCreateDailyPathAsync(dreamId, refresh: false, planDate: null, cancellationToken);
                 dream = await _dreamRepository.GetByIdAsync(dreamId, cancellationToken) ?? dream;
             }
             catch
@@ -96,7 +96,8 @@ public sealed class TalkToLumaService
                     profile.Values,
                     profile.Mood,
                     profile.Pace,
-                    profile.Summary)
+                    profile.Summary,
+                    profile.TargetYear)
                 : null,
             dream.FutureScenario is { } scenario
                 ? new FutureScenarioConversationContext(

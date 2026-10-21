@@ -7,6 +7,7 @@ import { LifestyleStep } from "./LifestyleStep";
 import { DayFeelStep } from "./DayFeelStep";
 import { ValuesStep } from "./ValuesStep";
 import { AboutYouStep } from "./AboutYouStep";
+import { TargetYearStep } from "./TargetYearStep";
 import { Button } from "@/components/ui/Button";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 
@@ -22,6 +23,7 @@ export const DiscoverFlow: React.FC = () => {
     updateDayFeel,
     updateValues,
     updateAboutYou,
+    updateTargetDate,
     nextStep,
     prevStep,
     canProceed,
@@ -148,6 +150,10 @@ export const DiscoverFlow: React.FC = () => {
               value={answers.aboutYou}
               onChange={updateAboutYou}
             />
+          )}
+
+          {currentStep === 5 && (
+            <TargetYearStep value={answers.targetDate} onChange={updateTargetDate} />
           )}
         </div>
 

@@ -10,4 +10,5 @@ public sealed record FutureScenarioResponse(
     string Evening,
     string EmotionalTone,
     string ClosingReflection,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int TargetYear);

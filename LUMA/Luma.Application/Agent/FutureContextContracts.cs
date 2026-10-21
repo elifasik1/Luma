@@ -17,7 +17,8 @@ public sealed record FutureProfileContext(
     string Mood,
     string Pace,
     string? Summary,
-    ThemeConfigContext? ThemeConfig);
+    ThemeConfigContext? ThemeConfig,
+    int TargetYear = 0);
 
 public sealed record ThemeConfigContext(
     string Palette,
