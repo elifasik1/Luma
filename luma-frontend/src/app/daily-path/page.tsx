@@ -44,8 +44,8 @@ function DailyPathContent() {
         if (!isMounted) return;
         setDream(dreamData);
 
-        // Use date parameter if provided, otherwise default to target date or today
-        const planDate = dateParam || dreamData.futureProfile?.targetDate || undefined;
+        // Use date parameter if provided, otherwise keep normal Today flow using today's date
+        const planDate = dateParam || undefined;
 
         const dailyPathData = await getDailyPath(currentDreamId, false, planDate);
         if (isMounted) {
@@ -71,7 +71,7 @@ function DailyPathContent() {
     };
   }, [dreamId, dateParam]);
 
-  const planDate = dateParam || dream?.futureProfile?.targetDate || undefined;
+  const planDate = dateParam || undefined;
 
   if (!dream && isLoading) {
     return (

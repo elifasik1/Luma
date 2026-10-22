@@ -43,10 +43,15 @@ public sealed class DailyPathService
 
         if (!refresh && currentSnapshot is not null)
         {
-            return MapToResponse(dream.DailyActions);
+            if (dream.DailyActions.Count > 0 && dream.DailyActions.All(a => a.ScheduledDate == effectivePlanDate))
+            {
+                return MapToResponse(dream.DailyActions);
+            }
+
+            return MapSnapshotToResponse(currentSnapshot);
         }
 
-        if (!refresh && dream.DailyActions.Count > 0)
+        if (!refresh && dream.DailyActions.Count > 0 && dream.DailyActions.All(a => a.ScheduledDate == effectivePlanDate))
         {
             var latestSnapshot = await _dreamRepository.GetLatestDailyPlanSnapshotAsync(
                 dreamId,
@@ -57,13 +62,9 @@ public sealed class DailyPathService
                 await _dreamRepository.AddDailyPlanSnapshotAsync(
                     CreateSnapshot(dream.Id, effectivePlanDate, dream.DailyActions),
                     cancellationToken);
-                return MapToResponse(dream.DailyActions);
             }
 
-            if (latestSnapshot.PlanDate >= effectivePlanDate)
-            {
-                return MapToResponse(dream.DailyActions);
-            }
+            return MapToResponse(dream.DailyActions);
         }
 
         if (dream.Goals.Count == 0)
@@ -237,6 +238,39 @@ public sealed class DailyPathService
         if (string.Equals(status, "Skipped", StringComparison.OrdinalIgnoreCase))
             return "Skipped";
         return "Pending";
+    }
+
+    private static DailyPathResponse MapSnapshotToResponse(DailyPlanSnapshot snapshot)
+    {
+        var ordered = snapshot.Actions.OrderBy(a => a.Order).ToList();
+        var generatedAt = snapshot.GeneratedAt;
+
+        var total = ordered.Count;
+        var completed = ordered.Count(a => string.Equals(a.Status, "Completed", StringComparison.OrdinalIgnoreCase));
+        var skipped = ordered.Count(a => string.Equals(a.Status, "Skipped", StringComparison.OrdinalIgnoreCase));
+
+        var momentumMessage = GenerateMomentumMessage(total, completed, skipped);
+
+        return new DailyPathResponse(
+            Actions: ordered.Select(a => new DailyActionResponse(
+                a.SourceDailyActionId ?? a.Id,
+                snapshot.DreamId,
+                a.GoalId,
+                a.GoalTitle,
+                a.Title,
+                a.Description,
+                a.TimeOfDay,
+                a.EstimatedMinutes,
+                a.Intention,
+                a.Order,
+                string.IsNullOrWhiteSpace(a.Status) ? "Pending" : a.Status,
+                a.CompletedAt,
+                snapshot.PlanDate)).ToList(),
+            GeneratedAt: generatedAt,
+            TotalActions: total,
+            CompletedActions: completed,
+            SkippedActions: skipped,
+            MomentumMessage: momentumMessage);
     }
 
     private static DailyPathResponse MapToResponse(IEnumerable<DailyAction> actions)

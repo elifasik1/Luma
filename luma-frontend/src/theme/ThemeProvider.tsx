@@ -51,6 +51,7 @@ import {
 } from "./normalize";
 import { getUserTheme, updateUserTheme } from "@/lib/api";
 import type { ThemeConfigDetailsResponse } from "@/lib/types";
+import { usePathname } from "next/navigation";
 
 // ---------------------------------------------------------------------------
 // Theme Shape & Context Value
@@ -135,6 +136,7 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const parentContext = useContext(ThemeContext);
   const isRootProvider = parentContext === defaultContextValue;
+  const pathname = usePathname();
 
   const [activeTheme, setActiveTheme] = useState<LumaTheme>(() => {
     if (initialPropTheme) {
@@ -160,14 +162,21 @@ export function ThemeProvider({
     let isMounted = true;
 
     async function loadBackendTheme() {
-      // Hydrate local cache without SSR hydration mismatch
+      // Hydrate local cache without SSR hydration mismatch.
+      // Skip on the public homepage so stale localStorage or another user's
+      // saved theme can never override the brand default (warm_dream).
+      // Authenticated users still receive their persisted theme from the
+      // backend call below, so saving/selection behavior is unaffected.
       try {
-        const cachedPalette = localStorage.getItem(STORAGE_KEY_PALETTE);
-        if (cachedPalette && isMounted) {
-          setActiveTheme((prev) => ({
-            ...prev,
-            palette: normalizePalette(cachedPalette),
-          }));
+        const isPublicHomepage = window.location.pathname === "/";
+        if (!isPublicHomepage) {
+          const cachedPalette = localStorage.getItem(STORAGE_KEY_PALETTE);
+          if (cachedPalette && isMounted) {
+            setActiveTheme((prev) => ({
+              ...prev,
+              palette: normalizePalette(cachedPalette),
+            }));
+          }
         }
       } catch {
         // ignore localStorage errors
@@ -178,6 +187,7 @@ export function ThemeProvider({
         if (!isMounted) return;
 
         if (savedTheme?.palette) {
+          // Authenticated user with saved theme
           const resolvedTheme: LumaTheme = {
             palette: normalizePalette(savedTheme.palette),
             atmosphere: normalizeAtmosphere(savedTheme.atmosphere || "calm"),
@@ -186,13 +196,24 @@ export function ThemeProvider({
             imagery: [],
           };
           setActiveTheme(resolvedTheme);
-          const isExplicitChoice = savedTheme.isExplicit ?? false;
-          hasUserExplicitlyChosenRef.current = isExplicitChoice;
+          // Always mark as explicit+resolved so dream themes don't overwrite a persisted preference
+          hasUserExplicitlyChosenRef.current = true;
           hasResolvedThemeRef.current = true;
 
           try {
             localStorage.setItem(STORAGE_KEY_PALETTE, resolvedTheme.palette);
-            localStorage.setItem(STORAGE_KEY_EXPLICIT, String(isExplicitChoice));
+            localStorage.setItem(STORAGE_KEY_EXPLICIT, "true");
+          } catch {
+            // ignore
+          }
+        } else {
+          // Anonymous user or no saved theme — reset to deterministic default
+          setActiveTheme(defaultTheme);
+          hasUserExplicitlyChosenRef.current = false;
+          hasResolvedThemeRef.current = false;
+          try {
+            localStorage.removeItem(STORAGE_KEY_PALETTE);
+            localStorage.removeItem(STORAGE_KEY_EXPLICIT);
           } catch {
             // ignore
           }
@@ -299,6 +320,8 @@ export function ThemeProvider({
     (themeConfig: ThemeConfigDetailsResponse | null | undefined) => {
       if (!themeConfig) return;
       if (isLoading) return;
+      // Never let dream themes affect the public homepage
+      if (pathname === "/") return;
       if (hasUserExplicitlyChosenRef.current) {
         // User has already explicitly chosen or loaded an account preference; do not overwrite!
         return;
@@ -312,13 +335,9 @@ export function ThemeProvider({
         imagery: [],
       };
       setActiveTheme(dreamTheme);
-      try {
-        localStorage.setItem(STORAGE_KEY_PALETTE, dreamTheme.palette);
-      } catch {
-        // ignore
-      }
+      // Don't write dream theme to localStorage — only explicit user choices should persist
     },
-    [isLoading]
+    [isLoading, pathname]
   );
 
   // Apply CSS custom properties to html element for universal consistency

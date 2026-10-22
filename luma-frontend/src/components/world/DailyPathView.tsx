@@ -64,6 +64,10 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
   const progressPercent = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   useEffect(() => {
+    setDailyPath(initialDailyPath);
+  }, [initialDailyPath]);
+
+  useEffect(() => {
     getReflections(dream.id)
       .then((data) => setReflections(data))
       .catch((err) => console.error("Could not load reflections:", err));
@@ -151,6 +155,7 @@ export const DailyPathView: React.FC<DailyPathViewProps> = ({
       const result = await createReflection(dream.id, {
         mood: selectedMood,
         notes: reflectionNotes,
+        planDate,
       });
 
       setReflections((prev) => [result, ...prev]);

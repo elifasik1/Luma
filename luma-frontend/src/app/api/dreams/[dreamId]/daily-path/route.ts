@@ -14,7 +14,11 @@ export async function GET(
     const { dreamId } = await params;
     const url = new URL(request.url);
     const refresh = url.searchParams.get("refresh");
-    const queryString = refresh === "true" ? "?refresh=true" : "";
+    const planDate = url.searchParams.get("planDate");
+    const searchParams = new URLSearchParams();
+    if (refresh === "true") searchParams.set("refresh", "true");
+    if (planDate) searchParams.set("planDate", planDate);
+    const queryString = searchParams.toString() ? `?${searchParams.toString()}` : "";
 
     const backendResponse = await authenticatedBackendFetch(
       request,

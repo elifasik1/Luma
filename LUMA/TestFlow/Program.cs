@@ -1842,6 +1842,49 @@ static async Task RunDailyPlanSnapshotTestsAsync()
         throw new Exception("FAILURE: Prior day historical statuses, timestamps, or estimated duration were corrupted by subsequent days' actions or refreshes.");
     }
 
+    // Target date test (2027-10-22)
+    var targetDate2027 = new DateOnly(2027, 10, 22);
+    var targetPlan = await dailyPathService.GetOrCreateDailyPathAsync(dream.Id, refresh: false, planDate: targetDate2027)
+        ?? throw new Exception("FAILURE: daily path for 2027-10-22 was not created.");
+    if (targetPlan.Actions.Count == 0 || targetPlan.Actions.Any(a => a.ScheduledDate != targetDate2027))
+    {
+        throw new Exception($"FAILURE: daily path actions did not have scheduled date 2027-10-22. Actual: {targetPlan.Actions.FirstOrDefault()?.ScheduledDate}");
+    }
+    var targetSnapshot = await repository.GetDailyPlanSnapshotAsync(dream.Id, targetDate2027)
+        ?? throw new Exception("FAILURE: snapshot for 2027-10-22 was not persisted.");
+    if (targetSnapshot.PlanDate != targetDate2027)
+    {
+        throw new Exception($"FAILURE: snapshot PlanDate was {targetSnapshot.PlanDate}, expected 2027-10-22.");
+    }
+
+    // Task update on 2027-10-22 preserves planDate
+    var updatedTargetAction = await dailyPathService.UpdateActionStatusAsync(
+        dream.Id,
+        targetPlan.Actions[0].Id,
+        "Completed",
+        scheduledDate: null,
+        planDate: targetDate2027)
+        ?? throw new Exception("FAILURE: update action status on 2027-10-22 failed.");
+    var refreshedTargetSnapshot = await repository.GetDailyPlanSnapshotAsync(dream.Id, targetDate2027)
+        ?? throw new Exception("FAILURE: snapshot disappeared after update.");
+    if (refreshedTargetSnapshot.Actions.Single(a => a.SourceDailyActionId == targetPlan.Actions[0].Id || a.Order == targetPlan.Actions[0].Order).Status != "Completed")
+    {
+        throw new Exception("FAILURE: task update status was not synchronized to 2027-10-22 snapshot.");
+    }
+
+    // Normal today flow without planDate uses current time and does not return 2027-10-22
+    var todayFlowPlan = await dailyPathService.GetOrCreateDailyPathAsync(dream.Id, refresh: false, planDate: null)
+        ?? throw new Exception("FAILURE: today flow without planDate failed.");
+    var currentDay = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+    var todaySnapshot = await repository.GetDailyPlanSnapshotAsync(dream.Id, currentDay)
+        ?? throw new Exception("FAILURE: snapshot for today was not retrieved/created.");
+    if (todaySnapshot.PlanDate != currentDay)
+    {
+        throw new Exception($"FAILURE: today flow used wrong date {todaySnapshot.PlanDate}, expected {currentDay}.");
+    }
+
+    Console.WriteLine($"TARGET DATE 2027-10-22 TEST PASSED: Actions={targetPlan.Actions.Count}, ScheduledDate={targetPlan.Actions[0].ScheduledDate}, SnapshotPlanDate={targetSnapshot.PlanDate}, TodayFlowDate={todaySnapshot.PlanDate}");
+
     Console.WriteLine("DAILY PLAN SNAPSHOT TESTS PASSED: daily idempotency, rollover/refresh history preservation, status/adaptive synchronization, date-safe reflection association, calendar summaries/details, and ownership isolation verified.");
 }
 

@@ -377,6 +377,13 @@ function JourneyContent() {
                 <span className="text-luma-text-secondary font-medium">
                   {selectedDay.actions.length} {selectedDay.actions.length === 1 ? "step" : "steps"}
                 </span>
+                <span className="text-luma-primary/30">·</span>
+                <Link
+                  href={`/daily-path?id=${dream.id}&date=${selectedDate}`}
+                  className="font-medium text-luma-primary underline underline-offset-2 hover:text-luma-accent"
+                >
+                  Open in Daily Path →
+                </Link>
               </div>
             )}
           </div>
@@ -501,6 +508,11 @@ function JourneyContent() {
             <div className="mt-5 rounded-2xl border border-dashed border-luma-primary/15 bg-white/30 p-6 text-center">
               <p className="font-serif text-xl text-luma-primary">An open day</p>
               <p className="mt-2 text-sm text-luma-text-secondary">No saved plan exists for this date. Nothing has been reconstructed from your current path.</p>
+              <div className="mt-4">
+                <Link href={`/daily-path?id=${dream.id}&date=${selectedDate}`}>
+                  <Button size="sm" variant="secondary">Open Daily Path for this day</Button>
+                </Link>
+              </div>
             </div>
           )}
         </section>

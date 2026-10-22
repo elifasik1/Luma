@@ -113,6 +113,13 @@ export const WorldView: React.FC<WorldViewProps> = ({
   const [targetDateSaving, setTargetDateSaving] = React.useState(false);
   const [targetDateFeedback, setTargetDateFeedback] = React.useState<string | null>(null);
 
+  // Keep pendingPalette in sync with the actual applied palette when selector is closed
+  React.useEffect(() => {
+    if (!themeOpen) {
+      setPendingPalette(palette);
+    }
+  }, [palette, themeOpen]);
+
   const openTheme = () => {
     originalPalette.current = palette;
     setPendingPalette(palette);

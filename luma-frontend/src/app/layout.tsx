@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, DM_Serif_Display } from "next/font/google";
 import { ThemeProvider } from "@/theme/ThemeProvider";
+import { TalkFab } from "@/components/ui/TalkFab";
 import "./globals.css";
 
 const inter = Inter({
@@ -53,6 +54,7 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `(function(){
               try {
+                if (window.location.pathname === '/') return;
                 var p = localStorage.getItem('luma_theme_palette');
                 if (p) document.documentElement.setAttribute('data-theme', p);
               } catch(e){}
@@ -61,7 +63,10 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-luma-bg text-luma-text">
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <TalkFab />
+        </ThemeProvider>
       </body>
     </html>
   );

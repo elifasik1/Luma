@@ -15,11 +15,14 @@ export async function PATCH(
 
   try {
     const { dreamId, actionId } = await params;
+    const url = new URL(request.url);
+    const planDate = url.searchParams.get("planDate");
+    const queryString = planDate ? `?planDate=${encodeURIComponent(planDate)}` : "";
     const body = await request.json();
 
     const backendResponse = await authenticatedBackendFetch(
       request,
-      `/dreams/${dreamId}/daily-actions/${actionId}`,
+      `/dreams/${dreamId}/daily-actions/${actionId}${queryString}`,
       {
         method: "PATCH",
         body: JSON.stringify(body),
